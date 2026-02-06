@@ -1,60 +1,86 @@
-# 🤖 Bot de Búsqueda de Empleo 24/7 (Back Office & Remoto)
+# 🤖 JobPulse: Agente de Reclutamiento Automatizado 24/7
 
-Este proyecto es un agente inteligente desarrollado en Python diseñado para rastrear automáticamente las principales plataformas de empleo en España, buscando puestos de **Back Office** con modalidad **Remoto/Teletrabajo**. El bot envía notificaciones instantáneas a través de un canal de **Telegram** cada vez que encuentra una nueva oferta.
+![GitHub Action Status](https://img.shields.io/github/actions/workflow/status/TU_USUARIO/TU_REPO/main.yml?branch=main&style=for-the-badge&logo=github-actions&logoColor=white)
+![Python Version](https://img.shields.io/badge/Python-3.10+-blue?style=for-the-badge&logo=python&logoColor=white)
+![License](https://img.shields.io/badge/License-MIT-green?style=for-the-badge&logo=opensourceinitiative&logoColor=white)
 
-## 🚀 Características Principales
-
-* **Multiplataforma**: Rastrea simultáneamente 8 portales líderes.
-* **Automatización Total**: Configurado para funcionar 24/7 mediante **GitHub Actions** sin necesidad de tener el ordenador encendido.
-* **Inteligencia Anti-Duplicados**: Utiliza un sistema de persistencia para no repetir ofertas que ya han sido enviadas.
-* **Simulación de Navegador Humano**: Implementa `curl_cffi` y cabeceras personalizadas para evitar bloqueos por parte de los portales de empleo.
-
-## 📊 Plataformas Soportadas
-
-| Plataforma | Especialidad |
-| :--- | :--- |
-| **LinkedIn** | Ofertas corporativas y perfiles profesionales. |
-| **InfoJobs** | Principal portal de empleo en España. |
-| **Indeed** | Agregador global de ofertas. |
-| **TecnoEmpleo** | Ofertas especializadas en tecnología y remoto. |
-| **Glassdoor** | Salarios y valoraciones de empresas. |
-| **Manfred** | Ofertas tecnológicas transparentes y remotas. |
-| **JobToday** | Mercado laboral dinámico y rápido. |
-| **Jooble** | Metuscador para no perder ninguna oportunidad. |
-
-## 🏗️ Arquitectura del Proyecto
-
-El bot tiene dos modos de operación:
-
-1. **Modo Nube (`bot_cloud.py`)**: Diseñado para ejecutarse en GitHub Actions. Se despierta, busca, notifica y se apaga. Utiliza el archivo `ofertas_vistas.txt` para recordar los IDs.
-2. **Modo Local (`Bot automático para búsqueda eempleo.py`)**: Script con bucle infinito para ejecución continua en un servidor propio o portátil.
-
-## 🛠️ Instalación y Configuración (Modo Nube)
-
-### 1. Variables de Entorno (Secrets)
-
-Para que el bot funcione en GitHub, debes añadir estos **Secrets** en tu repositorio (`Settings` > `Secrets and variables` > `Actions`):
-
-* `TELEGRAM_TOKEN`: El token proporcionado por [@BotFather](https://t.me/BotFather).
-* `TELEGRAM_CHAT_ID`: Tu ID de chat (puedes obtenerlo de [@userinfobot](https://t.me/userinfobot)).
-
-### 2. Permisos de Escritura
-
-Para que el bot pueda guardar las ofertas vistas, activa los permisos en:
-`Settings` > `Actions` > `General` > `Workflow permissions` > Seleccionar **"Read and write permissions"**.
-
-### 3. Ejecución
-
-El bot está configurado en `.github/workflows/main.yml` para ejecutarse cada 30 minutos de forma automática. También puedes lanzarlo manualmente desde la pestaña **Actions**.
-
-## 📦 Requisitos Técnicos
-
-Las librerías necesarias están detalladas en `requirements.txt`:
-
-* `requests`
-* `beautifulsoup4`
-* `curl_cffi`
-* `cloudscraper` (opcional según plataforma)
+**JobPulse** es una solución avanzada de automatización para la búsqueda de empleo. Diseñado específicamente para perfiles de **Back Office** y **Teletrabajo**, este agente rastrea incansablemente el ecosistema laboral español para notificarte nuevas oportunidades en tiempo real, dándote la ventaja competitiva de ser el primero en postularte.
 
 ---
-*Desarrollado con ❤️ para optimizar la búsqueda de empleo por EDL.*
+
+## 🌟 ¿Por qué JobPulse?
+
+En un mercado tan dinámico como el de "Back Office Remoto", la velocidad es clave. La mayoría de las ofertas reciben cientos de aplicaciones en las primeras horas. **JobPulse** elimina la necesidad de refrescar portales manualmente, haciendo el trabajo sucio por ti.
+
+### 🚀 Características de Élite
+
+* **Omnicanalidad**: Rastreo unificado de 8 plataformas líderes (LinkedIn, InfoJobs, Indeed, etc.).
+* **Ejecución Serverless**: Gracias a GitHub Actions, el bot vive en la nube, operando gratis y sin interrupciones.
+* **Sigilo Avanzado**: Bypass de protecciones anti-bot mediante `curl_cffi` (impersonación de TLS/Navegador).
+* **Persistencia Inteligente**: Base de datos ligera para evitar notificaciones duplicadas.
+* **Notificaciones Premium**: Formateo HTML enriquecido directamente en tu Telegram.
+
+---
+
+## 📊 Ecosistema de Rastreo
+
+| Plataforma | Fortaleza | Tecnología de Scraping |
+| :--- | :--- | :--- |
+| **LinkedIn** | Networking / Corporativo | Requests + BS4 |
+| **InfoJobs** | Líder en España | Curl-cffi (Chrome Impersonation) |
+| **Indeed** | Agregador Masivo | Cloudscraper / TLS Bypass |
+| **TecnoEmpleo** | IT & Remoto | BS4 + Heurística de enlaces |
+| **Glassdoor** | Salarios / Insights | Data-test Attribute targeting |
+| **Manfred** | Transparencia | JSON Next.js Data Extract |
+| **JobToday** | Dinamismo | RE-based filtering |
+| **Jooble** | Metuscador | Link pattern matching |
+
+---
+
+## 🏗️ Arquitectura del Sistema
+
+```mermaid
+graph TD
+    A[GitHub Actions Schedule] -->|Cada 30 min| B(Ejecución bot_cloud.py)
+    B --> C{Rastreadores}
+    C -->|LinkedIn| D[Scraping]
+    C -->|InfoJobs| E[Bypass Security]
+    C -->|Agregadores| F[Indeed/Jooble]
+    D & E & F --> G[Normalización de Ofertas]
+    G --> H{¿Visto antes?}
+    H -->|No| I[Telegram Notification]
+    H -->|Sí| J[Ignorar]
+    I --> K[Actualizar ofertas_vistas.txt]
+    K --> L[Git Commit/Push Automático]
+```
+
+---
+
+## 🛠️ Configuración en 3 Pasos
+
+### 1. Preparación de Secretos
+
+En tu repositorio de GitHub, navega a `Settings > Secrets and variables > Actions` y añade:
+
+* `TELEGRAM_TOKEN`: Tu llave maestra de BotFather.
+* `TELEGRAM_CHAT_ID`: Tu identificador personal de chat.
+
+### 2. Activación de Permisos
+
+Fundamental para que el sistema "recuerde" lo que ya te ha enviado:
+`Settings > Actions > General > Workflow permissions` ➔ Activar **"Read and write permissions"**.
+
+### 3. ¡Despegue
+
+Sube el código y el bot se activará solo. Puedes monitorizar la actividad en la pestaña **Actions**.
+
+---
+
+## � Roadmap de Mejoras
+
+- [ ] Integración de IA (GPT-4o) para filtrar ofertas por salario estimado.
+* [ ] Panel de control web (Dashboard) para ver estadísticas de rastreo.
+* [ ] Análisis de sentimiento en descripciones de puestos.
+
+---
+*Desarrollado con ❤️ para transformar la búsqueda de empleo en una ventaja estratégica.*
