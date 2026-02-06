@@ -78,9 +78,10 @@ Sube el código y el bot se activará solo. Puedes monitorizar la actividad en l
 
 ## � Roadmap de Mejoras
 
-- [ ] Integración de IA (GPT-4o) para filtrar ofertas por salario estimado.
+* [ ] Integración de IA (GPT-4o) para filtrar ofertas por salario estimado.
+
 * [ ] Panel de control web (Dashboard) para ver estadísticas de rastreo.
 * [ ] Análisis de sentimiento en descripciones de puestos.
 
 ---
-*Desarrollado con ❤️ para transformar la búsqueda de empleo en una ventaja estratégica.*
+*Desarrollado con ❤️ (EDL) para transformar la búsqueda de empleo en una ventaja estratégica.*
