@@ -28,7 +28,7 @@ def guardar_vistas(vistas):
 
 OFERTAS_VISTAS = cargar_vistas()
 
-# Headers globales
+# --- HEADERS GLOBALES ---
 HEADERS = {
     "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/119.0.0.0 Safari/537.36"
 }
@@ -52,7 +52,7 @@ def enviar_telegram(mensaje):
         print(f"Error enviando a Telegram: {e}")
         return False
 
-# --- FUNCIONES DE BÚSQUEDA (IDÉNTICAS AL ORIGINAL) ---
+# --- FUNCIONES DE BÚSQUEDA ---
 
 def buscar_linkedin():
     print("Revisando LinkedIn...")
@@ -106,7 +106,7 @@ def buscar_indeed():
 
 def buscar_infojobs():
     print("Revisando InfoJobs...")
-    url_ij = "https://www.infojobs.net/jobsearch/search-results/list.xhtml?keywords=Back%20Office&teleworking=solo-teletrabajo&published=last24h"
+    url_ij = "https://www.infojobs.net/ofertas-trabajo?keyword=backoffice&teleworkingIds=3&sortBy=PUBLICATION_DATE"
     try:
         time.sleep(random.uniform(2, 4))
         res = curl_requests.get(url_ij, impersonate="chrome120", timeout=30)
@@ -121,7 +121,15 @@ def buscar_infojobs():
                 if not match: continue
                 job_id = "infojobs_" + match.group(1)
                 if job_id not in OFERTAS_VISTAS:
-                    titulo = html.escape(link_tag.text.strip()) or "Puesto InfoJobs"
+                    raw_titulo = link_tag.text.strip()
+                    if not raw_titulo:
+                        raw_titulo = "Puesto InfoJobs"
+                    
+                    # Filtro manual de calidad para asegurar que sea backoffice o relacionado
+                    if not any(k in raw_titulo.lower() for k in ["back", "office", "admin", "auxiliar", "gestión", "recep"]):
+                        continue
+                        
+                    titulo = html.escape(raw_titulo)
                     mensaje = (f"🔵 <b>¡NUEVA OFERTA EN INFOJOBS!</b>\n\n📌 <b>Puesto:</b> {titulo}\n🕒 <b>Filtro:</b> 24h / Remoto\n\n🔗 <a href='{link}'>Postularse</a>")
                     if enviar_telegram(mensaje): OFERTAS_VISTAS.add(job_id)
             except Exception: continue
