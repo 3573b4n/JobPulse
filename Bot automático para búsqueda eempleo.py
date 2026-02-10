@@ -4,17 +4,36 @@ import time
 import schedule
 import html
 
-# --- TUS DATOS CONFIGURADOS ---
-TOKEN = "8290995613:AAFfckFmKlMSUpgaFOvkxu9jzaJahf0ZX-I"
-# IMPORTANTE: CHAT_ID debe ser TU ID de usuario, no el ID del bot.
-# Puedes obtener tu ID enviando un mensaje a @userinfobot en Telegram.
-CHAT_ID = "276483510" 
-OFERTAS_VISTAS = set()
+import os
+from curl_cffi import requests as curl_requests
 
-# Headers para que LinkedIn crea que somos un navegador real
-HEADERS = {
-    "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/119.0.0.0 Safari/537.36"
-}
+# --- TUS DATOS CONFIGURADOS ---
+# --- TUS DATOS CONFIGURADOS ---
+# En GitHub Actions, usa Secrets para TOKEN y CHAT_ID por seguridad
+TOKEN = os.getenv("TELEGRAM_TOKEN", "8290995613:AAFfckFmKlMSUpgaFOvkxu9jzaJahf0ZX-I")
+CHAT_ID = os.getenv("TELEGRAM_CHAT_ID", "276483510") 
+
+# --- PERSISTENCIA DE DATOS ---
+SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
+DB_FILE = os.path.join(SCRIPT_DIR, "ofertas_vistas.txt")
+
+def cargar_vistas():
+    if os.path.exists(DB_FILE):
+        try:
+            with open(DB_FILE, "r", encoding="utf-8") as f:
+                return set(f.read().splitlines())
+        except Exception as e:
+            print(f"Error cargando base de datos: {e}")
+    return set()
+
+def guardar_vistas(vistas):
+    try:
+        with open(DB_FILE, "w", encoding="utf-8") as f:
+            f.write("\n".join(vistas))
+    except Exception as e:
+        print(f"Error guardando base de datos: {e}")
+
+OFERTAS_VISTAS = cargar_vistas()
 
 def enviar_telegram(mensaje):
     url = f"https://api.telegram.org/bot{TOKEN}/sendMessage"
@@ -35,12 +54,15 @@ def enviar_telegram(mensaje):
 
 def buscar_linkedin():
     print("Revisando LinkedIn...")
-    url_lp = "https://www.linkedin.com/jobs/search/?currentJobId=4369673774&f_TPR=r86400&f_WT=2&geoId=105646813&keywords=Back%20Office&origin=JOB_SEARCH_PAGE_LOCATION_HISTORY&refresh=true"
+    # URL optimizada para remoto y últimas 24h
+    url_lp = "https://www.linkedin.com/jobs/search/?f_TPR=r86400&f_WT=2&keywords=Back%20Office&location=Spain"
     
     try:
-        res = requests.get(url_lp, headers=HEADERS, timeout=15)
+        # Usamos curl_requests para imitar navegador real
+        res = curl_requests.get(url_lp, impersonate="chrome120", timeout=30)
+        
         if res.status_code != 200:
-            print(f"Error: LinkedIn devolvió status {res.status_code}")
+            print(f"LinkedIn Status {res.status_code}")
             return
 
         soup = BeautifulSoup(res.text, 'html.parser')
@@ -90,27 +112,23 @@ import random
 
 def buscar_indeed():
     print("Revisando Indeed...")
-    url_in = "https://es.indeed.com/jobs?q=back+office&l=espa%C3%B1a&fromage=1&sc=0kf%3Aattr%28DS7X8%29%3B"
+    # URL optimizada: buscamos 'remoto' en el texto para ser más flexibles y ampliamos a 3 días
+    url_in = "https://es.indeed.com/jobs?q=back+office+remoto&l=espa%C3%B1a&fromage=3"
     
     try:
-        # Añadimos un pequeño delay aleatorio inicial
-        time.sleep(random.uniform(2, 5))
-        
-        # Usamos curl_requests con impersonate para imitar un navegador real a nivel de conexión
+        time.sleep(random.uniform(3, 6))
         res = curl_requests.get(
             url_in, 
-            impersonate="chrome120",
+            impersonate="chrome120", 
             timeout=30
         )
-        
         if res.status_code != 200:
-            print(f"Error: Indeed devolvió status {res.status_code}")
-            if res.status_code == 403:
-                print("💡 Indeed sigue bloqueando. Es posible que la IP requiera un tiempo de descanso.")
+            print(f"Error Indeed: Status {res.status_code}")
             return
-
+            
         soup = BeautifulSoup(res.text, 'html.parser')
         jobs = soup.find_all('div', class_='job_seen_beacon')
+        print(f"Indeed: Encontradas {len(jobs)} ofertas potenciales.")
         
         nuevas = 0
         for job in jobs:
@@ -118,6 +136,7 @@ def buscar_indeed():
                 link_tag = job.find('a', class_='jcs-JobTitle')
                 if not link_tag: continue
                 
+                # ID único de Indeed
                 job_id = "indeed_" + link_tag.get('data-jk', 'id_desconocido')
                 
                 if job_id not in OFERTAS_VISTAS:
@@ -125,43 +144,42 @@ def buscar_indeed():
                     empresa_elem = job.find('span', {'data-testid': 'company-name'}) or job.find('span', class_='companyName')
                     
                     if not titulo_elem: continue
-
+                    
                     titulo = html.escape(titulo_elem.text.strip())
                     empresa = html.escape(empresa_elem.text.strip()) if empresa_elem else "Empresa no especificada"
-                    link = "https://es.indeed.com" + link_tag['href']
+                    link = "https://es.indeed.com/viewjob?jk=" + link_tag.get('data-jk', '')
                     
-                    mensaje = (
-                        f"🔥 <b>¡NUEVA OFERTA EN INDEED!</b>\n\n"
-                        f"📌 <b>Puesto:</b> {titulo}\n"
-                        f"🏢 <b>Empresa:</b> {empresa}\n"
-                        f"🕒 <b>Filtro:</b> Últimas 24h / Remoto\n\n"
-                        f"🔗 <a href='{link}'>Postularse aquí</a>"
-                    )
+                    mensaje = (f"🔥 <b>¡NUEVA OFERTA EN INDEED!</b>\n\n"
+                              f"📌 <b>Puesto:</b> {titulo}\n"
+                              f"🏢 <b>Empresa:</b> {empresa}\n"
+                              f"🕒 <b>Filtro:</b> Remoto / 3 días\n\n"
+                              f"🔗 <a href='{link}'>Postularse</a>")
                     
                     if enviar_telegram(mensaje):
                         OFERTAS_VISTAS.add(job_id)
                         nuevas += 1
-            except Exception:
+                        print(f"  [+] Enviada: {titulo}")
+            except Exception as e:
+                print(f"Error parseando job Indeed: {e}")
                 continue
         
         if nuevas > 0:
             print(f"✅ Se enviaron {nuevas} ofertas nuevas de Indeed.")
         else:
             print("Indeed: No se encontraron ofertas nuevas.")
-                
+            
     except Exception as e:
-        print(f"Error en el scraping de Indeed: {e}")
+        print(f"Error crítico Indeed: {e}")
 
 import re
 
 def buscar_infojobs():
     print("Revisando InfoJobs...")
-    # URL actualizada para evitar errores 500
+    # Mantenemos InfoJobs pero con mayor tolerancia
     url_ij = "https://www.infojobs.net/ofertas-trabajo?keyword=backoffice&teleworkingIds=3&sortBy=PUBLICATION_DATE"
     
     try:
-        time.sleep(random.uniform(2, 4))
-        # InfoJobs a veces prefiere headers más explícitos
+        time.sleep(random.uniform(3, 6))
         headers_ij = {
             "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8",
             "Accept-Language": "es-ES,es;q=0.9",
@@ -175,9 +193,7 @@ def buscar_infojobs():
         )
         
         if res.status_code != 200:
-            print(f"Error: InfoJobs devolvió status {res.status_code}")
-            if res.status_code == 500:
-                print("💡 El servidor de InfoJobs dio un error interno. Puede ser un problema temporal o con los filtros.")
+            print(f"Error InfoJobs: Status {res.status_code}")
             return
 
         soup = BeautifulSoup(res.text, 'html.parser')
@@ -566,9 +582,13 @@ def ejecutar_todas():
     for nombre, func in plataformas:
         try:
             func()
-            time.sleep(random.uniform(5, 10)) # Pausas naturales
+            time.sleep(random.uniform(5, 12)) 
         except Exception as e:
             print(f"Error ejecutando {nombre}: {e}")
+    
+    # Guardamos el progreso después de cada ciclo
+    guardar_vistas(OFERTAS_VISTAS)
+    print("--- Ciclo completado y base de datos actualizada ---")
 
 # --- PROGRAMACIÓN ---
 schedule.every(10).minutes.do(ejecutar_todas)
@@ -581,6 +601,10 @@ if __name__ == "__main__":
     
     ejecutar_todas()
     
-    while True:
-        schedule.run_pending()
-        time.sleep(1)
+    # Si estamos en GitHub Actions, salimos para que el proceso termine
+    if os.getenv("GITHUB_ACTIONS"):
+        print("🤖 Ciclo finalizado en GitHub. Saliendo...")
+    else:
+        while True:
+            schedule.run_pending()
+            time.sleep(1)
