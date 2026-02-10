@@ -16,6 +16,7 @@ CHAT_ID = os.getenv("TELEGRAM_CHAT_ID", "276483510")
 # --- PERSISTENCIA DE DATOS ---
 SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
 DB_FILE = os.path.join(SCRIPT_DIR, "ofertas_vistas.txt")
+HB_FILE = os.path.join(SCRIPT_DIR, "last_heartbeat.txt")
 
 def cargar_vistas():
     if os.path.exists(DB_FILE):
@@ -566,8 +567,31 @@ def buscar_jooble():
     except Exception as e:
         print(f"Error en Jooble: {e}")
 
+def verificar_latido():
+    """Envía un mensaje diario de 'estoy vivo' para que sepas que el bot funciona."""
+    hoy = time.strftime("%Y-%m-%d")
+    enviado_hoy = False
+    
+    if os.path.exists(HB_FILE):
+        with open(HB_FILE, "r") as f:
+            if f.read().strip() == hoy:
+                enviado_hoy = True
+    
+    if not enviado_hoy:
+        msg = (f"🔋 <b>REPORTE DIARIO DE ESTADO</b>\n"
+               f"📅 Fecha: {hoy}\n"
+               f"✅ El sistema está funcionando correctamente.\n"
+               f"🤖 Escaneando cada 30 minutos en GitHub.")
+        if enviar_telegram(msg):
+            with open(HB_FILE, "w") as f:
+                f.write(hoy)
+            return True
+    return False
+
 def ejecutar_todas():
-    # Ordenamos por fiabilidad/calidad
+    print("--- Iniciando ciclo de búsqueda ---")
+    verificar_latido()
+    
     plataformas = [
         ("LinkedIn", buscar_linkedin),
         ("InfoJobs", buscar_infojobs),
@@ -579,29 +603,34 @@ def ejecutar_todas():
         ("Jooble", buscar_jooble)
     ]
     
+    errores = []
     for nombre, func in plataformas:
         try:
             func()
             time.sleep(random.uniform(5, 12)) 
         except Exception as e:
-            print(f"Error ejecutando {nombre}: {e}")
+            err_msg = f"Error en {nombre}: {e}"
+            print(err_msg)
+            errores.append(err_msg)
     
-    # Guardamos el progreso después de cada ciclo
+    if errores:
+        # Si hay muchos errores (ej. 3 o más), notificamos que algo podría ir mal
+        if len(errores) >= 3:
+            enviar_telegram(f"⚠️ <b>ALERTA DE SISTEMA</b>\nSe han detectado errores en {len(errores)} plataformas. Es posible que algunas webs hayan cambiado su estructura.")
+
     guardar_vistas(OFERTAS_VISTAS)
     print("--- Ciclo completado y base de datos actualizada ---")
 
-# --- PROGRAMACIÓN ---
-schedule.every(10).minutes.do(ejecutar_todas)
-
 if __name__ == "__main__":
     print("🤖 Agente iniciado. Presiona Ctrl+C para detener.")
-    # startup_msg = "✅ <b>Agente de Empleo activado</b>\nBuscando en LinkedIn, Indeed e InfoJobs cada 10 minutos..."
-    # if not enviar_telegram(startup_msg):
-    #     print("⚠️ ALERTA: No se pudo enviar el mensaje inicial a Telegram. Revisa el CHAT_ID.")
     
-    ejecutar_todas()
+    try:
+        ejecutar_todas()
+    except Exception as e:
+        enviar_telegram(f"❌ <b>ERROR CRÍTICO</b>\nEl bot se ha detenido por un error inesperado: {e}")
+        raise e
     
-    # Si estamos en GitHub Actions, salimos para que el proceso termine
+    # Si estamos en GitHub Actions, salimos para que el proceso termine y se guarde el commit
     if os.getenv("GITHUB_ACTIONS"):
         print("🤖 Ciclo finalizado en GitHub. Saliendo...")
     else:
