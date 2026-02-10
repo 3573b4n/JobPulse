@@ -1,0 +1,36 @@
+name: Job Scraper Bot
+
+on:
+  schedule:
+    - cron: '*/30 * * * *' # Ejecuta cada 30 minutos
+  workflow_dispatch: # Permite ejecutarlo manualmente
+
+jobs:
+  scrape:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v3
+
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.10'
+
+      - name: Install dependencies
+        run: |
+          pip install -r requirements.txt
+
+      - name: Run Scraper
+        env:
+          TELEGRAM_TOKEN: ${{ secrets.TELEGRAM_TOKEN }}
+          TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
+        run: python "Bot automático para búsqueda eempleo.py"
+
+      - name: Save persistent data
+        run: |
+          git config --global user.name 'github-actions'
+          git config --global user.email 'github-actions@github.com'
+          git add ofertas_vistas.txt
+          git commit -m "chore: update seen jobs [skip ci]" || echo "No changes to commit"
+          git push || echo "No changes to push"
