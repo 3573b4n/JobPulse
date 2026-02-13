@@ -58,8 +58,8 @@ def buscar_linkedin():
     print("Revisando LinkedIn...")
     url_lp = "https://www.linkedin.com/jobs/search/?currentJobId=4369673774&f_TPR=r86400&f_WT=2&geoId=105646813&keywords=Back%20Office&origin=JOB_SEARCH_PAGE_LOCATION_HISTORY&refresh=true"
     try:
-        res = requests.get(url_lp, headers=HEADERS, timeout=15)
-        if res.status_code != 200: return
+        res = curl_requests.get(url_lp, impersonate="chrome120", timeout=30)
+        if res.status_code != 200: return 0
         soup = BeautifulSoup(res.text, 'html.parser')
         jobs = soup.find_all('div', class_='base-card')
         nuevas = 0
@@ -92,7 +92,7 @@ def buscar_indeed():
     try:
         time.sleep(random.uniform(2, 5))
         res = curl_requests.get(url_in, impersonate="chrome120", timeout=30)
-        if res.status_code != 200: return
+        if res.status_code != 200: return 0
         soup = BeautifulSoup(res.text, 'html.parser')
         jobs = soup.find_all('div', class_='job_seen_beacon')
         nuevas = 0
@@ -123,7 +123,7 @@ def buscar_infojobs():
     try:
         time.sleep(random.uniform(2, 4))
         res = curl_requests.get(url_ij, impersonate="chrome120", timeout=30)
-        if res.status_code != 200: return
+        if res.status_code != 200: return 0
         soup = BeautifulSoup(res.text, 'html.parser')
         links_ofertas = soup.find_all('a', href=re.compile(r'/of-i'))
         nuevas = 0
@@ -158,7 +158,7 @@ def buscar_tecnoempleo():
     try:
         time.sleep(random.uniform(2, 4))
         res = curl_requests.get(url_te, impersonate="chrome120", timeout=30)
-        if res.status_code != 200: return
+        if res.status_code != 200: return 0
         soup = BeautifulSoup(res.text, 'html.parser')
         offers = soup.find_all('h3')
         nuevas = 0
@@ -184,7 +184,7 @@ def buscar_jobtoday():
     try:
         time.sleep(random.uniform(2, 4))
         res = curl_requests.get(url_jt, impersonate="chrome120", timeout=30)
-        if res.status_code != 200: return
+        if res.status_code != 200: return 0
         soup = BeautifulSoup(res.text, 'html.parser')
         links = soup.find_all('a', href=re.compile(r'/job/|/trabajo/'))
         nuevas = 0
@@ -210,7 +210,7 @@ def buscar_glassdoor():
     try:
         time.sleep(random.uniform(3, 5))
         res = curl_requests.get(url_gd, impersonate="chrome120", timeout=30)
-        if res.status_code != 200: return
+        if res.status_code != 200: return 0
         soup = BeautifulSoup(res.text, 'html.parser')
         job_links = soup.find_all('a', attrs={'data-test': 'job-link'})
         nuevas = 0
@@ -234,7 +234,7 @@ def buscar_manfred():
     try:
         time.sleep(random.uniform(2, 4))
         res = curl_requests.get(url_mf, impersonate="chrome120", timeout=30)
-        if res.status_code != 200: return
+        if res.status_code != 200: return 0
         soup = BeautifulSoup(res.text, 'html.parser')
         offers = soup.find_all(['h2', 'h3'])
         nuevas = 0
@@ -262,7 +262,7 @@ def buscar_jooble():
     try:
         time.sleep(random.uniform(4, 6))
         res = curl_requests.get(url_jb, impersonate="chrome120", timeout=30)
-        if res.status_code != 200: return
+        if res.status_code != 200: return 0
         soup = BeautifulSoup(res.text, 'html.parser')
         items = soup.find_all('article')
         nuevas = 0
