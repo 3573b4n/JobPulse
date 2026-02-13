@@ -62,6 +62,7 @@ def buscar_linkedin():
         if res.status_code != 200: return
         soup = BeautifulSoup(res.text, 'html.parser')
         jobs = soup.find_all('div', class_='base-card')
+        nuevas = 0
         for job in jobs:
             try:
                 job_id = "linkedin_" + job.get('data-entity-urn', 'id_desconocido')
@@ -73,6 +74,11 @@ def buscar_linkedin():
                     titulo = html.escape(titulo_elem.text.strip())
                     empresa = html.escape(empresa_elem.text.strip())
                     link = link_elem['href']
+                    mensaje = (f"🚀 <b>¡NUEVA OFERTA EN LINKEDIN!</b>\n\n"
+                               f"📌 <b>Puesto:</b> {titulo}\n"
+                               f"🏢 <b>Empresa:</b> {empresa}\n"
+                               f"🕒 <b>Filtro:</b> 24h / Remoto\n\n"
+                               f"🔗 <a href='{link}'>Postularse</a>")
                     if enviar_telegram(mensaje): OFERTAS_VISTAS.add(job_id); nuevas += 1
             except Exception: continue
         return nuevas
@@ -89,6 +95,7 @@ def buscar_indeed():
         if res.status_code != 200: return
         soup = BeautifulSoup(res.text, 'html.parser')
         jobs = soup.find_all('div', class_='job_seen_beacon')
+        nuevas = 0
         for job in jobs:
             try:
                 link_tag = job.find('a', class_='jcs-JobTitle')
@@ -119,6 +126,7 @@ def buscar_infojobs():
         if res.status_code != 200: return
         soup = BeautifulSoup(res.text, 'html.parser')
         links_ofertas = soup.find_all('a', href=re.compile(r'/of-i'))
+        nuevas = 0
         for link_tag in links_ofertas:
             try:
                 link = link_tag['href']
@@ -153,6 +161,7 @@ def buscar_tecnoempleo():
         if res.status_code != 200: return
         soup = BeautifulSoup(res.text, 'html.parser')
         offers = soup.find_all('h3')
+        nuevas = 0
         for offer in offers:
             try:
                 link_tag = offer.find('a')
@@ -178,6 +187,7 @@ def buscar_jobtoday():
         if res.status_code != 200: return
         soup = BeautifulSoup(res.text, 'html.parser')
         links = soup.find_all('a', href=re.compile(r'/job/|/trabajo/'))
+        nuevas = 0
         for link_tag in links:
             try:
                 href = "https://jobtoday.com" + link_tag['href'] if not link_tag['href'].startswith('http') else link_tag['href']
@@ -203,6 +213,7 @@ def buscar_glassdoor():
         if res.status_code != 200: return
         soup = BeautifulSoup(res.text, 'html.parser')
         job_links = soup.find_all('a', attrs={'data-test': 'job-link'})
+        nuevas = 0
         for link_tag in job_links:
             try:
                 href = "https://www.glassdoor.es" + link_tag['href'] if not link_tag['href'].startswith('http') else link_tag['href']
@@ -226,6 +237,7 @@ def buscar_manfred():
         if res.status_code != 200: return
         soup = BeautifulSoup(res.text, 'html.parser')
         offers = soup.find_all(['h2', 'h3'])
+        nuevas = 0
         for offer in offers:
             try:
                 link_tag = offer.find('a') or offer.find_parent('a')
@@ -253,6 +265,7 @@ def buscar_jooble():
         if res.status_code != 200: return
         soup = BeautifulSoup(res.text, 'html.parser')
         items = soup.find_all('article')
+        nuevas = 0
         for item in items:
             try:
                 link_tag = item.find('a', href=re.compile(r'/desc/|/external/'))
