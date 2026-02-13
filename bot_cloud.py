@@ -38,7 +38,6 @@ def enviar_telegram(mensaje):
     except: return False
 
 def peticion_pro(url, imp="chrome110"):
-    # curl_cffi maneja automáticamente los headers para que coincidan con la huella TLS
     return curl_requests.get(url, impersonate=imp, timeout=30)
 
 # --- RASTREADORES ---
@@ -79,13 +78,13 @@ def buscar_infojobs(query):
             try:
                 href = link['href']
                 match = re.search(r'of-i([a-zA-Z0-9]+)', href)
-                if not match: continue
-                job_id = "ij_" + match.group(1)
-                if job_id not in OFERTAS_VISTAS:
-                    titulo = link.text.strip()
-                    if not any(k in titulo.lower() for k in ["back", "office", "admin", "postventa", "director", "mando"]): continue
-                    if enviar_telegram(f"🔵 <b>INFOJOBS</b>\n📌 {html.escape(titulo)}\n🔗 <a href='{href}'>Ver</a>"):
-                        OFERTAS_VISTAS.add(job_id); nuevas += 1
+                if match:
+                    job_id = "ij_" + match.group(1)
+                    if job_id not in OFERTAS_VISTAS:
+                        titulo = link.text.strip()
+                        if any(k in titulo.lower() for k in ["back", "office", "admin", "postventa", "director", "mando"]):
+                            if enviar_telegram(f"🔵 <b>INFOJOBS</b>\n📌 {html.escape(titulo)}\n🔗 <a href='{href}'>Ver</a>"):
+                                OFERTAS_VISTAS.add(job_id); nuevas += 1
             except: continue
         return nuevas, None
     except Exception as e: return 0, f"InfoJobs: {str(e)}"
@@ -95,7 +94,7 @@ def buscar_indeed(query):
     url = f"https://es.indeed.com/jobs?q={q_enc}&l=España&fromage=1"
     try:
         time.sleep(random.uniform(2, 4))
-        res = peticion_pro(url, imp="safari_15_3") # Safari suele tener menos problemas en Indeed
+        res = peticion_pro(url, imp="chrome110")
         if res.status_code != 200: return 0, f"Indeed: {res.status_code}"
         soup = BeautifulSoup(res.text, 'html.parser')
         jobs = soup.find_all('div', class_=re.compile(r'job_seen_beacon'))
@@ -103,14 +102,14 @@ def buscar_indeed(query):
         for job in jobs:
             try:
                 link_tag = job.find('a', href=re.compile(r'/rc/|/pagead/'))
-                if not link_tag: continue
-                jk = re.search(r'jk=([a-zA-Z0-9]+)', link_tag['href']).group(1)
-                job_id = "in_" + jk
-                if job_id not in OFERTAS_VISTAS:
-                    titulo = job.find('h2').text.strip()
-                    link = f"https://es.indeed.com/viewjob?jk={jk}"
-                    if enviar_telegram(f"🔥 <b>INDEED</b>\n📌 {titulo}\n🔗 <a href='{link}'>Ver</a>"):
-                        OFERTAS_VISTAS.add(job_id); nuevas += 1
+                if link_tag:
+                    jk = re.search(r'jk=([a-zA-Z0-9]+)', link_tag['href']).group(1)
+                    job_id = "in_" + jk
+                    if job_id not in OFERTAS_VISTAS:
+                        titulo = job.find('h2').text.strip()
+                        link = f"https://es.indeed.com/viewjob?jk={jk}"
+                        if enviar_telegram(f"🔥 <b>INDEED</b>\n📌 {titulo}\n🔗 <a href='{link}'>Ver</a>"):
+                            OFERTAS_VISTAS.add(job_id); nuevas += 1
             except: continue
         return nuevas, None
     except Exception as e: return 0, f"Indeed: {str(e)}"
@@ -191,12 +190,12 @@ def buscar_manfred():
         for offer in offers:
             try:
                 t = offer.text.strip()
-                if not any(k in t.lower() for k in ["back office", "admin", "postventa", "director", "mando"]): continue
-                href = "https://www.getmanfred.com" + offer.find_parent('a')['href']
-                job_id = "mf_" + href.split('/')[-1]
-                if job_id not in OFERTAS_VISTAS:
-                    if enviar_telegram(f"🦄 <b>MANFRED</b>\n📌 {t}\n🔗 <a href='{href}'>Ver</a>"):
-                        OFERTAS_VISTAS.add(job_id); nuevas += 1
+                if any(k in t.lower() for k in ["back office", "admin", "postventa", "director", "mando"]):
+                    href = "https://www.getmanfred.com" + offer.find_parent('a')['href']
+                    job_id = "mf_" + href.split('/')[-1]
+                    if job_id not in OFERTAS_VISTAS:
+                        if enviar_telegram(f"🦄 <b>MANFRED</b>\n📌 {t}\n🔗 <a href='{href}'>Ver</a>"):
+                            OFERTAS_VISTAS.add(job_id); nuevas += 1
             except: continue
         return nuevas, None
     except Exception as e: return 0, f"Manfred: {str(e)}"
@@ -206,7 +205,7 @@ def buscar_jooble(query):
     url = f"https://es.jooble.org/trabajo?q={q_enc}&l=España"
     try:
         time.sleep(random.uniform(2, 4))
-        res = peticion_pro(url, imp="chrome116")
+        res = peticion_pro(url, imp="chrome110")
         if res.status_code != 200: return 0, f"Jooble: {res.status_code}"
         soup = BeautifulSoup(res.text, 'html.parser')
         articles = soup.find_all('article')
@@ -214,13 +213,13 @@ def buscar_jooble(query):
         for art in articles:
             try:
                 link = art.find('a')
-                if not link or '/desc/' not in link['href']: continue
-                href = link['href']
-                job_id = "jb_" + str(hash(href))
-                if job_id not in OFERTAS_VISTAS:
-                    t = link.text.strip()
-                    if enviar_telegram(f"🔍 <b>JOOBLE</b>\n📌 {t}\n🔗 <a href='{href}'>Ver</a>"):
-                        OFERTAS_VISTAS.add(job_id); nuevas += 1
+                if link and '/desc/' in link['href']:
+                    href = link['href']
+                    job_id = "jb_" + str(hash(href))
+                    if job_id not in OFERTAS_VISTAS:
+                        t = link.text.strip()
+                        if enviar_telegram(f"🔍 <b>JOOBLE</b>\n📌 {t}\n🔗 <a href='{href}'>Ver</a>"):
+                            OFERTAS_VISTAS.add(job_id); nuevas += 1
             except: continue
         return nuevas, None
     except Exception as e: return 0, f"Jooble: {str(e)}"
