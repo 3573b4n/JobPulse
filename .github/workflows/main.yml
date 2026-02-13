@@ -1,11 +1,12 @@
 name: Bot Empleo 24/7
+
 on:
   schedule:
-    - cron: "*/30 * * * *"
-  workflow_dispatch:
+    - cron: "*/30 * * * *"  # Se ejecuta cada 30 minutos
+  workflow_dispatch:        # Permite ejecutarlo manualmente desde la web
 
 permissions:
-  contents: write
+  contents: write           # Permiso crucial para guardar el archivo ofertas_vistas.txt
 
 jobs:
   run-bot:
@@ -33,5 +34,5 @@ jobs:
           git config --global user.name 'GitHub Action'
           git config --global user.email 'action@github.com'
           git add ofertas_vistas.txt
-          git commit -m "Update seen jobs" || echo "No changes"
+          git commit -m "Update seen jobs [skip ci]" || echo "Sin cambios"
           git push
