@@ -104,17 +104,19 @@ def buscar_linkedin():
             print(f"✅ Se enviaron {nuevas} ofertas nuevas de LinkedIn.")
         else:
             print("No se encontraron ofertas nuevas en LinkedIn.")
+        return nuevas
                 
     except Exception as e:
         print(f"Error en el scraping de LinkedIn: {e}")
+        return 0
 
 from curl_cffi import requests as curl_requests
 import random
 
 def buscar_indeed():
     print("Revisando Indeed...")
-    # URL optimizada: buscamos 'remoto' en el texto para ser más flexibles y ampliamos a 3 días
-    url_in = "https://es.indeed.com/jobs?q=back+office+remoto&l=espa%C3%B1a&fromage=3"
+    # URL optimizada: buscamos 'remoto' en el texto para ser más flexibles y filtramos por las últimas 24h
+    url_in = "https://es.indeed.com/jobs?q=back+office+remoto&l=espa%C3%B1a&fromage=1"
     
     try:
         time.sleep(random.uniform(3, 6))
@@ -153,7 +155,7 @@ def buscar_indeed():
                     mensaje = (f"🔥 <b>¡NUEVA OFERTA EN INDEED!</b>\n\n"
                               f"📌 <b>Puesto:</b> {titulo}\n"
                               f"🏢 <b>Empresa:</b> {empresa}\n"
-                              f"🕒 <b>Filtro:</b> Remoto / 3 días\n\n"
+                              f"🕒 <b>Filtro:</b> Remoto / 24h\n\n"
                               f"🔗 <a href='{link}'>Postularse</a>")
                     
                     if enviar_telegram(mensaje):
@@ -168,16 +170,18 @@ def buscar_indeed():
             print(f"✅ Se enviaron {nuevas} ofertas nuevas de Indeed.")
         else:
             print("Indeed: No se encontraron ofertas nuevas.")
+        return nuevas
             
     except Exception as e:
         print(f"Error crítico Indeed: {e}")
+        return 0
 
 import re
 
 def buscar_infojobs():
     print("Revisando InfoJobs...")
-    # Mantenemos InfoJobs pero con mayor tolerancia
-    url_ij = "https://www.infojobs.net/ofertas-trabajo?keyword=backoffice&teleworkingIds=3&sortBy=PUBLICATION_DATE"
+    # InfoJobs: Backoffice, Remoto (id 3), Ordenado por fecha, Últimas 24h (history=1)
+    url_ij = "https://www.infojobs.net/ofertas-trabajo?keyword=backoffice&teleworkingIds=3&sortBy=PUBLICATION_DATE&history=1"
     
     try:
         time.sleep(random.uniform(3, 6))
@@ -259,9 +263,11 @@ def buscar_infojobs():
             print(f"✅ Se enviaron {nuevas} ofertas nuevas de InfoJobs (Total detectadas: {len(links_ofertas)}).")
         else:
             print(f"InfoJobs: No se encontraron ofertas nuevas (Total detectadas: {len(links_ofertas)}).")
+        return nuevas
                 
     except Exception as e:
         print(f"Error en el scraping de InfoJobs: {e}")
+        return 0
 
 def buscar_tecnoempleo():
     print("Revisando TecnoEmpleo...")
@@ -320,14 +326,16 @@ def buscar_tecnoempleo():
             print(f"✅ Se enviaron {nuevas} ofertas nuevas de TecnoEmpleo.")
         else:
             print("TecnoEmpleo: No se encontraron ofertas nuevas.")
+        return nuevas
                 
     except Exception as e:
         print(f"Error en el scraping de TecnoEmpleo: {e}")
+        return 0
 
 def buscar_jobtoday():
     print("Revisando JobToday...")
-    # URL: Back Office
-    url_jt = "https://jobtoday.com/es/jobs?q=back+office"
+    # JobToday: Back Office Remoto
+    url_jt = "https://jobtoday.com/es/jobs?q=back+office+remoto"
     
     try:
         time.sleep(random.uniform(2, 4))
@@ -398,9 +406,11 @@ def buscar_jobtoday():
             print(f"✅ Se enviaron {nuevas} ofertas nuevas de JobToday.")
         else:
             print("JobToday: No se encontraron ofertas nuevas.")
+        return nuevas
                 
     except Exception as e:
         print(f"Error en el scraping de JobToday: {e}")
+        return 0
 
 def buscar_glassdoor():
     print("Revisando Glassdoor...")
@@ -457,8 +467,10 @@ def buscar_glassdoor():
                 continue
         
         print(f"Glassdoor: {nuevas} ofertas nuevas enviadas.")
+        return nuevas
     except Exception as e:
         print(f"Error en Glassdoor: {e}")
+        return 0
 
 def buscar_manfred():
     print("Revisando Manfred...")
@@ -510,13 +522,15 @@ def buscar_manfred():
             except Exception:
                 continue
         print(f"Manfred: {nuevas} ofertas nuevas enviadas.")
+        return nuevas
     except Exception as e:
         print(f"Error en Manfred: {e}")
+        return 0
 
 def buscar_jooble():
     print("Revisando Jooble...")
-    # Jooble es un agregador, buscamos por términos específicos
-    url_jb = "https://es.jooble.org/trabajo-back-office-remoto/España"
+    # Jooble (Agregator): Back Office, Remoto, Últimas 24h
+    url_jb = "https://es.jooble.org/trabajo-back-office-remoto/España?date=1"
     
     try:
         time.sleep(random.uniform(4, 6))
@@ -564,8 +578,10 @@ def buscar_jooble():
             except Exception:
                 continue
         print(f"Jooble: {nuevas} ofertas nuevas enviadas.")
+        return nuevas
     except Exception as e:
         print(f"Error en Jooble: {e}")
+        return 0
 
 def verificar_latido():
     """Envía un mensaje diario de 'estoy vivo' para que sepas que el bot funciona."""
@@ -604,22 +620,30 @@ def ejecutar_todas():
     ]
     
     errores = []
+    total_nuevas = 0
     for nombre, func in plataformas:
         try:
-            func()
+            nuevas = func()
+            total_nuevas += nuevas
             time.sleep(random.uniform(5, 12)) 
         except Exception as e:
             err_msg = f"Error en {nombre}: {e}"
             print(err_msg)
             errores.append(err_msg)
     
+    # Mensaje de resumen final
+    if total_nuevas == 0:
+        enviar_telegram("🔎 <b>Búsqueda finalizada</b>\n\n0 ofertas encontradas en las últimas 24h.")
+    else:
+        enviar_telegram(f"✅ <b>Búsqueda completada</b>\n\nSe han encontrado <b>{total_nuevas}</b> ofertas nuevas en total.")
+
     if errores:
         # Si hay muchos errores (ej. 3 o más), notificamos que algo podría ir mal
         if len(errores) >= 3:
             enviar_telegram(f"⚠️ <b>ALERTA DE SISTEMA</b>\nSe han detectado errores en {len(errores)} plataformas. Es posible que algunas webs hayan cambiado su estructura.")
 
     guardar_vistas(OFERTAS_VISTAS)
-    print("--- Ciclo completado y base de datos actualizada ---")
+    print(f"--- Ciclo completado. Total nuevas: {total_nuevas} ---")
 
 if __name__ == "__main__":
     print("🤖 Agente iniciado. Presiona Ctrl+C para detener.")

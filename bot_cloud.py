@@ -73,10 +73,12 @@ def buscar_linkedin():
                     titulo = html.escape(titulo_elem.text.strip())
                     empresa = html.escape(empresa_elem.text.strip())
                     link = link_elem['href']
-                    mensaje = (f"🚀 <b>¡NUEVA OFERTA EN LINKEDIN!</b>\n\n📌 <b>Puesto:</b> {titulo}\n🏢 <b>Empresa:</b> {empresa}\n🕒 <b>Filtro:</b> 24h / Remoto\n\n🔗 <a href='{link}'>Postularse</a>")
-                    if enviar_telegram(mensaje): OFERTAS_VISTAS.add(job_id)
+                    if enviar_telegram(mensaje): OFERTAS_VISTAS.add(job_id); nuevas += 1
             except Exception: continue
-    except Exception as e: print(f"Error LinkedIn: {e}")
+        return nuevas
+    except Exception as e: 
+        print(f"Error LinkedIn: {e}")
+        return 0
 
 def buscar_indeed():
     print("Revisando Indeed...")
@@ -100,13 +102,17 @@ def buscar_indeed():
                     empresa = html.escape(empresa_elem.text.strip()) if empresa_elem else "Empresa?"
                     link = "https://es.indeed.com" + link_tag['href']
                     mensaje = (f"🔥 <b>¡NUEVA OFERTA EN INDEED!</b>\n\n📌 <b>Puesto:</b> {titulo}\n🏢 <b>Empresa:</b> {empresa}\n🕒 <b>Filtro:</b> 24h / Remoto\n\n🔗 <a href='{link}'>Postularse</a>")
-                    if enviar_telegram(mensaje): OFERTAS_VISTAS.add(job_id)
+                    if enviar_telegram(mensaje): OFERTAS_VISTAS.add(job_id); nuevas += 1
             except Exception: continue
-    except Exception as e: print(f"Error Indeed: {e}")
+        return nuevas
+    except Exception as e: 
+        print(f"Error Indeed: {e}")
+        return 0
 
 def buscar_infojobs():
     print("Revisando InfoJobs...")
-    url_ij = "https://www.infojobs.net/ofertas-trabajo?keyword=backoffice&teleworkingIds=3&sortBy=PUBLICATION_DATE"
+    # InfoJobs: backoffice remoto ordenado por fecha últimas 24h (history=1)
+    url_ij = "https://www.infojobs.net/ofertas-trabajo?keyword=backoffice&teleworkingIds=3&sortBy=PUBLICATION_DATE&history=1"
     try:
         time.sleep(random.uniform(2, 4))
         res = curl_requests.get(url_ij, impersonate="chrome120", timeout=30)
@@ -131,9 +137,12 @@ def buscar_infojobs():
                         
                     titulo = html.escape(raw_titulo)
                     mensaje = (f"🔵 <b>¡NUEVA OFERTA EN INFOJOBS!</b>\n\n📌 <b>Puesto:</b> {titulo}\n🕒 <b>Filtro:</b> 24h / Remoto\n\n🔗 <a href='{link}'>Postularse</a>")
-                    if enviar_telegram(mensaje): OFERTAS_VISTAS.add(job_id)
+                    if enviar_telegram(mensaje): OFERTAS_VISTAS.add(job_id); nuevas += 1
             except Exception: continue
-    except Exception as e: print(f"Error InfoJobs: {e}")
+        return nuevas
+    except Exception as e: 
+        print(f"Error InfoJobs: {e}")
+        return 0
 
 def buscar_tecnoempleo():
     print("Revisando TecnoEmpleo...")
@@ -153,13 +162,16 @@ def buscar_tecnoempleo():
                 if job_id not in OFERTAS_VISTAS:
                     titulo = html.escape(link_tag.text.strip())
                     mensaje = (f"💻 <b>¡NUEVA OFERTA EN TECNOEMPLEO!</b>\n\n📌 <b>Puesto:</b> {titulo}\n🕒 <b>Filtro:</b> 24h / Remoto\n\n🔗 <a href='{link}'>Postularse</a>")
-                    if enviar_telegram(mensaje): OFERTAS_VISTAS.add(job_id)
+                    if enviar_telegram(mensaje): OFERTAS_VISTAS.add(job_id); nuevas += 1
             except Exception: continue
-    except Exception as e: print(f"Error TecnoEmpleo: {e}")
+        return nuevas
+    except Exception as e: 
+        print(f"Error TecnoEmpleo: {e}")
+        return 0
 
 def buscar_jobtoday():
     print("Revisando JobToday...")
-    url_jt = "https://jobtoday.com/es/jobs?q=back+office"
+    url_jt = "https://jobtoday.com/es/jobs?q=back+office+remoto"
     try:
         time.sleep(random.uniform(2, 4))
         res = curl_requests.get(url_jt, impersonate="chrome120", timeout=30)
@@ -175,9 +187,12 @@ def buscar_jobtoday():
                 if job_id not in OFERTAS_VISTAS:
                     titulo = html.escape(re.split(r'\d+\s+(minutos|horas|días)', raw_text)[0].strip())
                     mensaje = (f"📱 <b>¡NUEVA OFERTA EN JOBTODAY!</b>\n\n📌 <b>Puesto:</b> {titulo}\n🕒 <b>Filtro:</b> Remoto\n\n🔗 <a href='{href}'>Postularse</a>")
-                    if enviar_telegram(mensaje): OFERTAS_VISTAS.add(job_id)
+                    if enviar_telegram(mensaje): OFERTAS_VISTAS.add(job_id); nuevas += 1
             except Exception: continue
-    except Exception as e: print(f"Error JobToday: {e}")
+        return nuevas
+    except Exception as e: 
+        print(f"Error JobToday: {e}")
+        return 0
 
 def buscar_glassdoor():
     print("Revisando Glassdoor...")
@@ -195,9 +210,12 @@ def buscar_glassdoor():
                 if job_id not in OFERTAS_VISTAS:
                     titulo = html.escape(link_tag.get('aria-label') or link_tag.text.strip())
                     mensaje = (f"📊 <b>¡NUEVA OFERTA EN GLASSDOOR!</b>\n\n📌 <b>Puesto:</b> {titulo}\n🕒 <b>Filtro:</b> Reciente / Remoto\n\n🔗 <a href='{href}'>Postularse</a>")
-                    if enviar_telegram(mensaje): OFERTAS_VISTAS.add(job_id)
+                    if enviar_telegram(mensaje): OFERTAS_VISTAS.add(job_id); nuevas += 1
             except Exception: continue
-    except Exception as e: print(f"Error Glassdoor: {e}")
+        return nuevas
+    except Exception as e: 
+        print(f"Error Glassdoor: {e}")
+        return 0
 
 def buscar_manfred():
     print("Revisando Manfred...")
@@ -219,13 +237,16 @@ def buscar_manfred():
                 job_id = "mf_" + href.split('/')[-1]
                 if job_id not in OFERTAS_VISTAS:
                     mensaje = (f"🦄 <b>¡NUEVA OFERTA EN MANFRED!</b>\n\n📌 <b>Puesto:</b> {titulo}\n🏢 <b>Empresa:</b> Manfred\n🕒 <b>Filtro:</b> 100% Remoto\n\n🔗 <a href='{href}'>Postularse</a>")
-                    if enviar_telegram(mensaje): OFERTAS_VISTAS.add(job_id)
+                    if enviar_telegram(mensaje): OFERTAS_VISTAS.add(job_id); nuevas += 1
             except Exception: continue
-    except Exception as e: print(f"Error Manfred: {e}")
+        return nuevas
+    except Exception as e: 
+        print(f"Error Manfred: {e}")
+        return 0
 
 def buscar_jooble():
     print("Revisando Jooble...")
-    url_jb = "https://es.jooble.org/trabajo-back-office-remoto/España"
+    url_jb = "https://es.jooble.org/trabajo-back-office-remoto/España?date=1"
     try:
         time.sleep(random.uniform(4, 6))
         res = curl_requests.get(url_jb, impersonate="chrome120", timeout=30)
@@ -241,19 +262,28 @@ def buscar_jooble():
                 if job_id not in OFERTAS_VISTAS:
                     titulo = html.escape(link_tag.text.strip())
                     mensaje = (f"🔍 <b>¡NUEVA OFERTA EN JOOBLE!</b>\n\n📌 <b>Puesto:</b> {titulo}\n🕒 <b>Filtro:</b> Remoto\n\n🔗 <a href='{href}'>Postularse</a>")
-                    if enviar_telegram(mensaje): OFERTAS_VISTAS.add(job_id)
+                    if enviar_telegram(mensaje): OFERTAS_VISTAS.add(job_id); nuevas += 1
             except Exception: continue
-    except Exception as e: print(f"Error Jooble: {e}")
+        return nuevas
+    except Exception as e: 
+        print(f"Error Jooble: {e}")
+        return 0
 
 def ejecutar_todas():
-    buscar_linkedin()
-    buscar_infojobs()
-    buscar_tecnoempleo()
-    buscar_indeed()
-    buscar_jobtoday()
-    buscar_glassdoor()
-    buscar_manfred()
-    buscar_jooble()
+    total = 0
+    total += buscar_linkedin()
+    total += buscar_infojobs()
+    total += buscar_tecnoempleo()
+    total += buscar_indeed()
+    total += buscar_jobtoday()
+    total += buscar_glassdoor()
+    total += buscar_manfred()
+    total += buscar_jooble()
+    
+    if total == 0:
+        enviar_telegram("🔎 <b>Búsqueda finalizada</b>\n\n0 ofertas encontradas en las últimas 24h.")
+    else:
+        enviar_telegram(f"✅ <b>Búsqueda completada</b>\n\nSe han encontrado <b>{total}</b> ofertas nuevas.")
 
 if __name__ == "__main__":
     print("🤖 Iniciando rastreo...")
