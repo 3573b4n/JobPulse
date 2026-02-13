@@ -54,9 +54,10 @@ def enviar_telegram(mensaje):
 
 # --- FUNCIONES DE BÚSQUEDA ---
 
-def buscar_linkedin():
-    print("Revisando LinkedIn...")
-    url_lp = "https://www.linkedin.com/jobs/search/?currentJobId=4369673774&f_TPR=r86400&f_WT=2&geoId=105646813&keywords=Back%20Office&origin=JOB_SEARCH_PAGE_LOCATION_HISTORY&refresh=true"
+def buscar_linkedin(query):
+    print(f"Revisando LinkedIn para: {query}...")
+    q_enc = query.replace(" ", "%20")
+    url_lp = f"https://www.linkedin.com/jobs/search/?f_TPR=r86400&f_WT=2&keywords={q_enc}&location=Spain"
     try:
         res = curl_requests.get(url_lp, impersonate="chrome120", timeout=30)
         if res.status_code != 200: return 0
@@ -86,9 +87,10 @@ def buscar_linkedin():
         print(f"Error LinkedIn: {e}")
         return 0
 
-def buscar_indeed():
-    print("Revisando Indeed...")
-    url_in = "https://es.indeed.com/jobs?q=back+office&l=espa%C3%B1a&fromage=1&sc=0kf%3Aattr%28DS7X8%29%3B"
+def buscar_indeed(query):
+    print(f"Revisando Indeed para: {query}...")
+    q_enc = query.replace(" ", "+")
+    url_in = f"https://es.indeed.com/jobs?q={q_enc}&l=espa%C3%B1a&fromage=1&sc=0kf%3Aattr%28DS7X8%29%3B"
     try:
         time.sleep(random.uniform(2, 5))
         res = curl_requests.get(url_in, impersonate="chrome120", timeout=30)
@@ -116,10 +118,11 @@ def buscar_indeed():
         print(f"Error Indeed: {e}")
         return 0
 
-def buscar_infojobs():
-    print("Revisando InfoJobs...")
-    # InfoJobs: backoffice remoto ordenado por fecha últimas 24h (history=1)
-    url_ij = "https://www.infojobs.net/ofertas-trabajo?keyword=backoffice&teleworkingIds=3&sortBy=PUBLICATION_DATE&history=1"
+def buscar_infojobs(query):
+    print(f"Revisando InfoJobs para: {query}...")
+    q_enc = query.replace(" ", "%20")
+    # InfoJobs: remoto ordenado por fecha últimas 24h (history=1)
+    url_ij = f"https://www.infojobs.net/ofertas-trabajo?keyword={q_enc}&teleworkingIds=3&sortBy=PUBLICATION_DATE&history=1"
     try:
         time.sleep(random.uniform(2, 4))
         res = curl_requests.get(url_ij, impersonate="chrome120", timeout=30)
@@ -139,8 +142,9 @@ def buscar_infojobs():
                     if not raw_titulo:
                         raw_titulo = "Puesto InfoJobs"
                     
-                    # Filtro manual de calidad para asegurar que sea backoffice o relacionado
-                    if not any(k in raw_titulo.lower() for k in ["back", "office", "admin", "auxiliar", "gestión", "recep"]):
+                    # Filtro manual de calidad
+                    validos = ["back", "office", "admin", "auxiliar", "gestión", "recep", "postventa", "director", "mando"]
+                    if not any(k in raw_titulo.lower() for k in validos):
                         continue
                         
                     titulo = html.escape(raw_titulo)
@@ -152,9 +156,10 @@ def buscar_infojobs():
         print(f"Error InfoJobs: {e}")
         return 0
 
-def buscar_tecnoempleo():
-    print("Revisando TecnoEmpleo...")
-    url_te = "https://www.tecnoempleo.com/busqueda-empleo.php?te=back+office&re=1&f=24h"
+def buscar_tecnoempleo(query):
+    print(f"Revisando TecnoEmpleo para: {query}...")
+    q_enc = query.replace(" ", "+")
+    url_te = f"https://www.tecnoempleo.com/busqueda-empleo.php?te={q_enc}&re=1&f=24h"
     try:
         time.sleep(random.uniform(2, 4))
         res = curl_requests.get(url_te, impersonate="chrome120", timeout=30)
@@ -178,9 +183,10 @@ def buscar_tecnoempleo():
         print(f"Error TecnoEmpleo: {e}")
         return 0
 
-def buscar_jobtoday():
-    print("Revisando JobToday...")
-    url_jt = "https://jobtoday.com/es/jobs?q=back+office+remoto"
+def buscar_jobtoday(query):
+    print(f"Revisando JobToday para: {query}...")
+    q_enc = query.replace(" ", "+")
+    url_jt = f"https://jobtoday.com/es/jobs?q={q_enc}+remoto"
     try:
         time.sleep(random.uniform(2, 4))
         res = curl_requests.get(url_jt, impersonate="chrome120", timeout=30)
@@ -204,9 +210,10 @@ def buscar_jobtoday():
         print(f"Error JobToday: {e}")
         return 0
 
-def buscar_glassdoor():
-    print("Revisando Glassdoor...")
-    url_gd = "https://www.glassdoor.es/Job/espana-back-office-jobs-SRCH_IL.0,6_IN219_KO7,18.htm?fromAge=1"
+def buscar_glassdoor(query):
+    print(f"Revisando Glassdoor para: {query}...")
+    q_enc = query.replace(" ", "-")
+    url_gd = f"https://www.glassdoor.es/Job/espana-{q_enc}-jobs-SRCH_IL.0,6_IN219.htm?fromAge=1"
     try:
         time.sleep(random.uniform(3, 5))
         res = curl_requests.get(url_gd, impersonate="chrome120", timeout=30)
@@ -245,7 +252,8 @@ def buscar_manfred():
                 href = "https://www.getmanfred.com" + link_tag['href'] if not link_tag['href'].startswith('http') else link_tag['href']
                 if '/ofertas/' not in href: continue
                 titulo = html.escape(offer.text.strip())
-                if "back office" not in titulo.lower() and "admin" not in titulo.lower(): continue
+                validos = ["back office", "admin", "postventa", "director", "mando"]
+                if not any(k in titulo.lower() for k in validos): continue
                 job_id = "mf_" + href.split('/')[-1]
                 if job_id not in OFERTAS_VISTAS:
                     mensaje = (f"🦄 <b>¡NUEVA OFERTA EN MANFRED!</b>\n\n📌 <b>Puesto:</b> {titulo}\n🏢 <b>Empresa:</b> Manfred\n🕒 <b>Filtro:</b> 100% Remoto\n\n🔗 <a href='{href}'>Postularse</a>")
@@ -256,9 +264,10 @@ def buscar_manfred():
         print(f"Error Manfred: {e}")
         return 0
 
-def buscar_jooble():
-    print("Revisando Jooble...")
-    url_jb = "https://es.jooble.org/trabajo-back-office-remoto/España?date=1"
+def buscar_jooble(query):
+    print(f"Revisando Jooble para: {query}...")
+    q_enc = query.replace(" ", "-")
+    url_jb = f"https://es.jooble.org/trabajo-{q_enc}-remoto/España?date=1"
     try:
         time.sleep(random.uniform(4, 6))
         res = curl_requests.get(url_jb, impersonate="chrome120", timeout=30)
@@ -284,19 +293,24 @@ def buscar_jooble():
 
 def ejecutar_todas():
     total = 0
-    total += buscar_linkedin()
-    total += buscar_infojobs()
-    total += buscar_tecnoempleo()
-    total += buscar_indeed()
-    total += buscar_jobtoday()
-    total += buscar_glassdoor()
+    terminos = ["Back Office", "Postventa"]
+    
+    for term in terminos:
+        total += buscar_linkedin(term)
+        total += buscar_infojobs(term)
+        total += buscar_tecnoempleo(term)
+        total += buscar_indeed(term)
+        total += buscar_jobtoday(term)
+        total += buscar_glassdoor(term)
+        total += buscar_jooble(term)
+    
+    # Manfred no usa buscador por ahora, se llama una vez
     total += buscar_manfred()
-    total += buscar_jooble()
     
     if total == 0:
-        enviar_telegram("🔎 <b>Búsqueda finalizada</b>\n\n0 ofertas encontradas en las últimas 24h.")
+        enviar_telegram("🔎 <b>Búsqueda finalizada</b>\n\n0 ofertas nuevas encontradas en las últimas 24h.")
     else:
-        enviar_telegram(f"✅ <b>Búsqueda completada</b>\n\nSe han encontrado <b>{total}</b> ofertas nuevas.")
+        enviar_telegram(f"✅ <b>Búsqueda completada</b>\n\nSe han encontrado <b>{total}</b> ofertas nuevas entre todas las categorías.")
 
 if __name__ == "__main__":
     print("🤖 Iniciando rastreo...")
