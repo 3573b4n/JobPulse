@@ -60,21 +60,27 @@ def buscar_linkedin(query):
     url_lp = f"https://www.linkedin.com/jobs/search/?f_TPR=r86400&f_WT=2&keywords={q_enc}&location=Spain"
     try:
         res = curl_requests.get(url_lp, impersonate="chrome120", timeout=30)
-        if res.status_code != 200: return 0
+        if res.status_code != 200:
+            return 0, f"LinkedIn: Status {res.status_code}"
+            
         soup = BeautifulSoup(res.text, 'html.parser')
-        jobs = soup.find_all('div', class_='base-card')
+        # Buscamos por varias clases posibles
+        jobs = soup.find_all('div', class_=re.compile(r'base-card|job-search-card'))
         nuevas = 0
         for job in jobs:
             try:
-                job_id = "linkedin_" + job.get('data-entity-urn', 'id_desconocido')
+                job_id = "linkedin_" + (job.get('data-entity-urn') or job.get('data-id') or str(hash(job.text[:50])))
                 if job_id not in OFERTAS_VISTAS:
-                    titulo_elem = job.find('h3', class_='base-search-card__title')
-                    empresa_elem = job.find('h4', class_='base-search-card__subtitle')
-                    link_elem = job.find('a', class_='base-card__full-link')
-                    if not titulo_elem or not empresa_elem or not link_elem: continue
+                    titulo_elem = job.find(['h3', 'h2'], class_=re.compile(r'title|subtitle'))
+                    empresa_elem = job.find(['h4', 'span'], class_=re.compile(r'subtitle|company'))
+                    link_elem = job.find('a')
+                    
+                    if not titulo_elem or not link_elem: continue
+                    
                     titulo = html.escape(titulo_elem.text.strip())
-                    empresa = html.escape(empresa_elem.text.strip())
-                    link = link_elem['href']
+                    empresa = html.escape(empresa_elem.text.strip()) if empresa_elem else "Empresa"
+                    link = link_elem['href'].split('?')[0] # Limpiar URL
+                    
                     mensaje = (f"🚀 <b>¡NUEVA OFERTA EN LINKEDIN!</b>\n\n"
                                f"📌 <b>Puesto:</b> {titulo}\n"
                                f"🏢 <b>Empresa:</b> {empresa}\n"
@@ -82,10 +88,9 @@ def buscar_linkedin(query):
                                f"🔗 <a href='{link}'>Postularse</a>")
                     if enviar_telegram(mensaje): OFERTAS_VISTAS.add(job_id); nuevas += 1
             except Exception: continue
-        return nuevas
+        return nuevas, None
     except Exception as e: 
-        print(f"Error LinkedIn: {e}")
-        return 0
+        return 0, f"LinkedIn: {str(e)}"
 
 def buscar_indeed(query):
     print(f"Revisando Indeed para: {query}...")
@@ -94,39 +99,41 @@ def buscar_indeed(query):
     try:
         time.sleep(random.uniform(2, 5))
         res = curl_requests.get(url_in, impersonate="chrome120", timeout=30)
-        if res.status_code != 200: return 0
+        if res.status_code != 200:
+            return 0, f"Indeed: Status {res.status_code}"
+            
         soup = BeautifulSoup(res.text, 'html.parser')
-        jobs = soup.find_all('div', class_='job_seen_beacon')
+        jobs = soup.find_all('div', class_=re.compile(r'job_seen_beacon|result'))
         nuevas = 0
         for job in jobs:
             try:
-                link_tag = job.find('a', class_='jcs-JobTitle')
+                link_tag = job.find('a', class_=re.compile(r'jcs-JobTitle|jobtitle'))
                 if not link_tag: continue
-                job_id = "indeed_" + link_tag.get('data-jk', 'id_desconocido')
+                job_id = "indeed_" + (link_tag.get('data-jk') or str(hash(link_tag.text)))
                 if job_id not in OFERTAS_VISTAS:
-                    titulo_elem = job.find('h2', class_='jobTitle')
-                    empresa_elem = job.find('span', {'data-testid': 'company-name'}) or job.find('span', class_='companyName')
+                    titulo_elem = job.find(['h2', 'span'], class_=re.compile(r'jobTitle|title'))
+                    empresa_elem = job.find(['span', 'div'], attrs={'data-testid': 'company-name'}) or job.find('span', class_='companyName')
                     if not titulo_elem: continue
                     titulo = html.escape(titulo_elem.text.strip())
-                    empresa = html.escape(empresa_elem.text.strip()) if empresa_elem else "Empresa?"
+                    empresa = html.escape(empresa_elem.text.strip()) if empresa_elem else "Empresa"
                     link = "https://es.indeed.com" + link_tag['href']
                     mensaje = (f"🔥 <b>¡NUEVA OFERTA EN INDEED!</b>\n\n📌 <b>Puesto:</b> {titulo}\n🏢 <b>Empresa:</b> {empresa}\n🕒 <b>Filtro:</b> 24h / Remoto\n\n🔗 <a href='{link}'>Postularse</a>")
                     if enviar_telegram(mensaje): OFERTAS_VISTAS.add(job_id); nuevas += 1
             except Exception: continue
-        return nuevas
+        return nuevas, None
     except Exception as e: 
-        print(f"Error Indeed: {e}")
-        return 0
+        return 0, f"Indeed: {str(e)}"
 
 def buscar_infojobs(query):
     print(f"Revisando InfoJobs para: {query}...")
     q_enc = query.replace(" ", "%20")
-    # InfoJobs: remoto ordenado por fecha últimas 24h (history=1)
     url_ij = f"https://www.infojobs.net/ofertas-trabajo?keyword={q_enc}&teleworkingIds=3&sortBy=PUBLICATION_DATE&history=1"
     try:
         time.sleep(random.uniform(2, 4))
         res = curl_requests.get(url_ij, impersonate="chrome120", timeout=30)
-        if res.status_code != 200: return 0
+        if res.status_code != 200:
+            return 0, f"InfoJobs: Status {res.status_code}"
+            
         soup = BeautifulSoup(res.text, 'html.parser')
         links_ofertas = soup.find_all('a', href=re.compile(r'/of-i'))
         nuevas = 0
@@ -139,22 +146,18 @@ def buscar_infojobs(query):
                 job_id = "infojobs_" + match.group(1)
                 if job_id not in OFERTAS_VISTAS:
                     raw_titulo = link_tag.text.strip()
-                    if not raw_titulo:
-                        raw_titulo = "Puesto InfoJobs"
+                    if not raw_titulo: raw_titulo = "Puesto InfoJobs"
                     
-                    # Filtro manual de calidad
                     validos = ["back", "office", "admin", "auxiliar", "gestión", "recep", "postventa", "director", "mando"]
-                    if not any(k in raw_titulo.lower() for k in validos):
-                        continue
+                    if not any(k in raw_titulo.lower() for k in validos): continue
                         
                     titulo = html.escape(raw_titulo)
                     mensaje = (f"🔵 <b>¡NUEVA OFERTA EN INFOJOBS!</b>\n\n📌 <b>Puesto:</b> {titulo}\n🕒 <b>Filtro:</b> 24h / Remoto\n\n🔗 <a href='{link}'>Postularse</a>")
                     if enviar_telegram(mensaje): OFERTAS_VISTAS.add(job_id); nuevas += 1
             except Exception: continue
-        return nuevas
+        return nuevas, None
     except Exception as e: 
-        print(f"Error InfoJobs: {e}")
-        return 0
+        return 0, f"InfoJobs: {str(e)}"
 
 def buscar_tecnoempleo(query):
     print(f"Revisando TecnoEmpleo para: {query}...")
@@ -163,7 +166,9 @@ def buscar_tecnoempleo(query):
     try:
         time.sleep(random.uniform(2, 4))
         res = curl_requests.get(url_te, impersonate="chrome120", timeout=30)
-        if res.status_code != 200: return 0
+        if res.status_code != 200:
+            return 0, f"TecnoEmpleo: Status {res.status_code}"
+            
         soup = BeautifulSoup(res.text, 'html.parser')
         offers = soup.find_all('h3')
         nuevas = 0
@@ -178,10 +183,9 @@ def buscar_tecnoempleo(query):
                     mensaje = (f"💻 <b>¡NUEVA OFERTA EN TECNOEMPLEO!</b>\n\n📌 <b>Puesto:</b> {titulo}\n🕒 <b>Filtro:</b> 24h / Remoto\n\n🔗 <a href='{link}'>Postularse</a>")
                     if enviar_telegram(mensaje): OFERTAS_VISTAS.add(job_id); nuevas += 1
             except Exception: continue
-        return nuevas
+        return nuevas, None
     except Exception as e: 
-        print(f"Error TecnoEmpleo: {e}")
-        return 0
+        return 0, f"TecnoEmpleo: {str(e)}"
 
 def buscar_jobtoday(query):
     print(f"Revisando JobToday para: {query}...")
@@ -190,7 +194,9 @@ def buscar_jobtoday(query):
     try:
         time.sleep(random.uniform(2, 4))
         res = curl_requests.get(url_jt, impersonate="chrome120", timeout=30)
-        if res.status_code != 200: return 0
+        if res.status_code != 200:
+            return 0, f"JobToday: Status {res.status_code}"
+            
         soup = BeautifulSoup(res.text, 'html.parser')
         links = soup.find_all('a', href=re.compile(r'/job/|/trabajo/'))
         nuevas = 0
@@ -205,10 +211,9 @@ def buscar_jobtoday(query):
                     mensaje = (f"📱 <b>¡NUEVA OFERTA EN JOBTODAY!</b>\n\n📌 <b>Puesto:</b> {titulo}\n🕒 <b>Filtro:</b> Remoto\n\n🔗 <a href='{href}'>Postularse</a>")
                     if enviar_telegram(mensaje): OFERTAS_VISTAS.add(job_id); nuevas += 1
             except Exception: continue
-        return nuevas
+        return nuevas, None
     except Exception as e: 
-        print(f"Error JobToday: {e}")
-        return 0
+        return 0, f"JobToday: {str(e)}"
 
 def buscar_glassdoor(query):
     print(f"Revisando Glassdoor para: {query}...")
@@ -217,7 +222,9 @@ def buscar_glassdoor(query):
     try:
         time.sleep(random.uniform(3, 5))
         res = curl_requests.get(url_gd, impersonate="chrome120", timeout=30)
-        if res.status_code != 200: return 0
+        if res.status_code != 200:
+            return 0, f"Glassdoor: Status {res.status_code}"
+            
         soup = BeautifulSoup(res.text, 'html.parser')
         job_links = soup.find_all('a', attrs={'data-test': 'job-link'})
         nuevas = 0
@@ -230,10 +237,9 @@ def buscar_glassdoor(query):
                     mensaje = (f"📊 <b>¡NUEVA OFERTA EN GLASSDOOR!</b>\n\n📌 <b>Puesto:</b> {titulo}\n🕒 <b>Filtro:</b> Reciente / Remoto\n\n🔗 <a href='{href}'>Postularse</a>")
                     if enviar_telegram(mensaje): OFERTAS_VISTAS.add(job_id); nuevas += 1
             except Exception: continue
-        return nuevas
+        return nuevas, None
     except Exception as e: 
-        print(f"Error Glassdoor: {e}")
-        return 0
+        return 0, f"Glassdoor: {str(e)}"
 
 def buscar_manfred():
     print("Revisando Manfred...")
@@ -241,7 +247,9 @@ def buscar_manfred():
     try:
         time.sleep(random.uniform(2, 4))
         res = curl_requests.get(url_mf, impersonate="chrome120", timeout=30)
-        if res.status_code != 200: return 0
+        if res.status_code != 200:
+            return 0, f"Manfred: Status {res.status_code}"
+            
         soup = BeautifulSoup(res.text, 'html.parser')
         offers = soup.find_all(['h2', 'h3'])
         nuevas = 0
@@ -259,10 +267,9 @@ def buscar_manfred():
                     mensaje = (f"🦄 <b>¡NUEVA OFERTA EN MANFRED!</b>\n\n📌 <b>Puesto:</b> {titulo}\n🏢 <b>Empresa:</b> Manfred\n🕒 <b>Filtro:</b> 100% Remoto\n\n🔗 <a href='{href}'>Postularse</a>")
                     if enviar_telegram(mensaje): OFERTAS_VISTAS.add(job_id); nuevas += 1
             except Exception: continue
-        return nuevas
+        return nuevas, None
     except Exception as e: 
-        print(f"Error Manfred: {e}")
-        return 0
+        return 0, f"Manfred: {str(e)}"
 
 def buscar_jooble(query):
     print(f"Revisando Jooble para: {query}...")
@@ -271,7 +278,9 @@ def buscar_jooble(query):
     try:
         time.sleep(random.uniform(4, 6))
         res = curl_requests.get(url_jb, impersonate="chrome120", timeout=30)
-        if res.status_code != 200: return 0
+        if res.status_code != 200:
+            return 0, f"Jooble: Status {res.status_code}"
+            
         soup = BeautifulSoup(res.text, 'html.parser')
         items = soup.find_all('article')
         nuevas = 0
@@ -286,31 +295,54 @@ def buscar_jooble(query):
                     mensaje = (f"🔍 <b>¡NUEVA OFERTA EN JOOBLE!</b>\n\n📌 <b>Puesto:</b> {titulo}\n🕒 <b>Filtro:</b> Remoto\n\n🔗 <a href='{href}'>Postularse</a>")
                     if enviar_telegram(mensaje): OFERTAS_VISTAS.add(job_id); nuevas += 1
             except Exception: continue
-        return nuevas
+        return nuevas, None
     except Exception as e: 
-        print(f"Error Jooble: {e}")
-        return 0
+        return 0, f"Jooble: {str(e)}"
 
 def ejecutar_todas():
     total = 0
+    errores = []
     terminos = ["Back Office", "Postventa"]
     
+    plataformas = [
+        ("LinkedIn", buscar_linkedin),
+        ("InfoJobs", buscar_infojobs),
+        ("TecnoEmpleo", buscar_tecnoempleo),
+        ("Indeed", buscar_indeed),
+        ("JobToday", buscar_jobtoday),
+        ("Glassdoor", buscar_glassdoor),
+        ("Jooble", buscar_jooble)
+    ]
+    
     for term in terminos:
-        total += buscar_linkedin(term)
-        total += buscar_infojobs(term)
-        total += buscar_tecnoempleo(term)
-        total += buscar_indeed(term)
-        total += buscar_jobtoday(term)
-        total += buscar_glassdoor(term)
-        total += buscar_jooble(term)
+        for nombre, func in plataformas:
+            try:
+                nuevas, err = func(term)
+                total += nuevas
+                if err: errores.append(err)
+            except Exception as e:
+                errores.append(f"Error crítico en {nombre}: {e}")
     
-    # Manfred no usa buscador por ahora, se llama una vez
-    total += buscar_manfred()
+    # Manfred no usa buscador
+    try:
+        nuevas, err = buscar_manfred()
+        total += nuevas
+        if err: errores.append(err)
+    except Exception as e:
+        errores.append(f"Error crítico en Manfred: {e}")
     
+    # Resumen final
     if total == 0:
         enviar_telegram("🔎 <b>Búsqueda finalizada</b>\n\n0 ofertas nuevas encontradas en las últimas 24h.")
     else:
-        enviar_telegram(f"✅ <b>Búsqueda completada</b>\n\nSe han encontrado <b>{total}</b> ofertas nuevas entre todas las categorías.")
+        enviar_telegram(f"✅ <b>Búsqueda completada</b>\n\nSe han encontrado <b>{total}</b> ofertas nuevas en total.")
+    
+    # Notificar errores si hay muchos para diagnóstico
+    if errores:
+        # Eliminar duplicados de errores por términos
+        errores_unicos = list(set(errores))
+        txt_errores = "\n".join([f"• {e}" for e in errores_unicos])
+        enviar_telegram(f"⚠️ <b>AVISO DE SISTEMA</b>\nSe detectaron problemas en algunas plataformas:\n\n{txt_errores}")
 
 if __name__ == "__main__":
     print("🤖 Iniciando rastreo...")
