@@ -31,7 +31,7 @@ OFERTAS_VISTAS = cargar_vistas()
 def enviar_telegram(mensaje):
     if not TOKEN or not CHAT_ID: return False
     url = f"https://api.telegram.org/bot{TOKEN}/sendMessage"
-    payload = {"chat_id": CHAT_ID, "text": mensaje, "parse_mode": "HTML", "disable_web_page_preview": True}
+    payload = {"chat_id": CHAT_ID, "text": mensaje, "parse_mode": "HTML", "disable_web_page_preview": False}
     try:
         res = requests.post(url, data=payload, timeout=10)
         return res.status_code == 200
@@ -40,28 +40,19 @@ def enviar_telegram(mensaje):
 def peticion(url):
     return curl_requests.get(url, impersonate="chrome110", timeout=30)
 
-# --- LÓGICA DE FILTRADO UNIFICADA ---
-
 def es_oferta_valida(titulo, ubicacion_raw):
     titulo = titulo.lower()
-    ubicacion = ubicacion_raw.lower()
-    
-    # 1. Filtro de Puesto (Keywords de Backoffice / Postventa)
+    ubicacion = (ubicacion_raw or "").lower()
     keywords = ["back", "office", "postventa", "post-venta", "admin", "gestión", "mando", "director", "auxiliar"]
-    if not any(k in titulo for k in keywords):
-        return False
-        
-    # 2. Filtro Geográfico (Remoto o Murcia)
+    if not any(k in titulo for k in keywords): return False
     es_remoto = any(x in ubicacion or x in titulo for x in ["remoto", "teletrabajo", "100%", "home office", "distancia"])
     es_murcia = "murcia" in ubicacion or "murcia" in titulo
-    
     return es_remoto or es_murcia
 
 # --- RASTREADORES ---
 
 def buscar_linkedin(query):
     q_enc = query.replace(" ", "%20")
-    # LinkedIn: España (Remoto/Híbrido/Presencial para captar Murcia)
     url = f"https://www.linkedin.com/jobs/search/?f_TPR=r86400&keywords={q_enc}&location=Spain"
     try:
         res = peticion(url)
@@ -74,10 +65,10 @@ def buscar_linkedin(query):
                 titulo = job.find(['h3', 'h2']).text.strip()
                 ubi = job.find('span', class_='job-search-card__location').text.strip()
                 if es_oferta_valida(titulo, ubi):
-                    job_id = "ln_" + (job.get('data-entity-urn') or str(hash(titulo + ubi)))
+                    job_id = "ln_" + (job.get('data-entity-urn') or str(hash(titulo)))
                     if job_id not in OFERTAS_VISTAS:
                         link = job.find('a')['href'].split('?')[0]
-                        if enviar_telegram(f"🚀 <b>LINKEDIN</b>\n📌 {titulo}\n📍 {ubi}\n🔗 <a href='{link}'>Ver</a>"):
+                        if enviar_telegram(f"🚀 <b>LINKEDIN</b>\n📌 {titulo}\n📍 {ubi}\n🔗 <a href='{link}'>Postularse</a>"):
                             OFERTAS_VISTAS.add(job_id); nuevas += 1
             except: continue
         return nuevas
@@ -90,18 +81,17 @@ def buscar_infojobs(query):
         res = peticion(url)
         if res.status_code != 200: return 0
         soup = BeautifulSoup(res.text, 'html.parser')
-        items = soup.find_all('li', class_=re.compile(r'container-item')) or soup.find_all('a', href=re.compile(r'/of-i'))
+        links = soup.find_all('a', href=re.compile(r'/of-i'))
         nuevas = 0
-        for item in items:
+        for link_tag in links:
             try:
-                link_tag = item if item.name == 'a' else item.find('a', href=re.compile(r'/of-i'))
                 href = link_tag['href']
+                if not href.startswith('http'): href = "https://www.infojobs.net" + href
                 titulo = link_tag.text.strip()
-                # InfoJobs no siempre muestra la ubi en el listado, asumimos "Remoto/Murcia" por keywords o link
-                if es_oferta_valida(titulo, "Remoto Murcia"): # Filtro por título
-                    job_id = "ij_" + re.search(r'of-i([a-zA-Z0-9]+)', href).group(1)
+                if es_oferta_valida(titulo, "Remoto Murcia"):
+                    job_id = "ij_" + (re.search(r'of-i([a-zA-Z0-9]+)', href).group(1) if 'of-i' in href else str(hash(href)))
                     if job_id not in OFERTAS_VISTAS:
-                        if enviar_telegram(f"🔵 <b>INFOJOBS</b>\n📌 {html.escape(titulo)}\n🔗 <a href='{href}'>Ver</a>"):
+                        if enviar_telegram(f"🔵 <b>INFOJOBS</b>\n📌 {html.escape(titulo)}\n🔗 <a href='{href}'>Postularse</a>"):
                             OFERTAS_VISTAS.add(job_id); nuevas += 1
             except: continue
         return nuevas
@@ -114,7 +104,6 @@ def buscar_tecnoempleo(query):
         res = peticion(url)
         if res.status_code != 200: return 0
         soup = BeautifulSoup(res.text, 'html.parser')
-        # Buscamos los bloques de oferta
         offers = soup.find_all('div', class_='p-2') 
         nuevas = 0
         for off in offers:
@@ -123,12 +112,12 @@ def buscar_tecnoempleo(query):
                 if not title_tag: continue
                 titulo = title_tag.text.strip()
                 link = title_tag.find('a')['href']
-                # Ubicación en Tecnoempleo suele estar en un span o texto cercano
-                ubi = off.get_text().strip() 
+                if not link.startswith('http'): link = "https://www.tecnoempleo.com/" + link
+                ubi = off.get_text().strip()
                 if es_oferta_valida(titulo, ubi):
                     job_id = "te_" + str(hash(link))
                     if job_id not in OFERTAS_VISTAS:
-                        if enviar_telegram(f"💻 <b>TECNOEMPLEO</b>\n📌 {titulo}\n📍 {ubi[:30]}...\n🔗 <a href='{link}'>Ver</a>"):
+                        if enviar_telegram(f"💻 <b>TECNOEMPLEO</b>\n📌 {titulo}\n🔗 <a href='{link}'>Postularse</a>"):
                             OFERTAS_VISTAS.add(job_id); nuevas += 1
             except: continue
         return nuevas
@@ -145,12 +134,13 @@ def buscar_jobtoday(query):
         nuevas = 0
         for link in links:
             try:
+                href = link['href']
+                if not href.startswith('http'): href = "https://jobtoday.com" + href
                 titulo = link.text.strip().split("\n")[0]
-                href = "https://jobtoday.com" + link['href']
-                if es_oferta_valida(titulo, link.text):
+                if es_oferta_valida(titulo, "Remoto Murcia"):
                     job_id = "jt_" + str(hash(href))
                     if job_id not in OFERTAS_VISTAS:
-                        if enviar_telegram(f"📱 <b>JOBTODAY</b>\n📌 {titulo}\n🔗 <a href='{href}'>Ver</a>"):
+                        if enviar_telegram(f"📱 <b>JOBTODAY</b>\n📌 {titulo}\n🔗 <a href='{href}'>Postularse</a>"):
                             OFERTAS_VISTAS.add(job_id); nuevas += 1
             except: continue
         return nuevas
@@ -167,12 +157,13 @@ def buscar_manfred():
         for offer in offers:
             try:
                 titulo = offer.text.strip()
-                # Manfred suele ser 100% remoto, pero validamos puesto
                 if es_oferta_valida(titulo, "Remoto"):
-                    href = "https://www.getmanfred.com" + offer.find_parent('a')['href']
+                    link_tag = offer.find_parent('a') or offer.find('a')
+                    href = link_tag['href']
+                    if not href.startswith('http'): href = "https://www.getmanfred.com" + href
                     job_id = "mf_" + href.split('/')[-1]
                     if job_id not in OFERTAS_VISTAS:
-                        if enviar_telegram(f"🦄 <b>MANFRED</b>\n📌 {titulo}\n🔗 <a href='{href}'>Ver</a>"):
+                        if enviar_telegram(f"🦄 <b>MANFRED</b>\n📌 {titulo}\n🔗 <a href='{href}'>Postularse</a>"):
                             OFERTAS_VISTAS.add(job_id); nuevas += 1
             except: continue
         return nuevas
@@ -186,11 +177,12 @@ def ejecutar_todas():
         total += buscar_infojobs(term)
         total += buscar_tecnoempleo(term)
         total += buscar_jobtoday(term)
-        time.sleep(3)
+        time.sleep(2)
     total += buscar_manfred()
     if total > 0:
-        enviar_telegram(f"✅ <b>Búsqueda finalizada</b>\nSe han enviado <b>{total}</b> ofertas que cumplen tus filtros (Remoto/Murcia).")
+        enviar_telegram(f"✅ <b>Búsqueda finalizada</b>\nSe han enviado <b>{total}</b> ofertas nuevas.")
 
 if __name__ == "__main__":
     ejecutar_todas()
     guardar_vistas(OFERTAS_VISTAS)
+
