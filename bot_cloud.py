@@ -14,13 +14,17 @@ DB_FILE = "ofertas_vistas.txt"
 
 def cargar_vistas():
     if os.path.exists(DB_FILE):
-        with open(DB_FILE, "r", encoding="utf-8") as f:
-            return set(f.read().splitlines())
+        try:
+            with open(DB_FILE, "r", encoding="utf-8") as f:
+                return set(f.read().splitlines())
+        except: return set()
     return set()
 
 def guardar_vistas(vistas):
-    with open(DB_FILE, "w", encoding="utf-8") as f:
-        f.write("\n".join(list(vistas)))
+    try:
+        with open(DB_FILE, "w", encoding="utf-8") as f:
+            f.write("\n".join(list(vistas)))
+    except: pass
 
 OFERTAS_VISTAS = cargar_vistas()
 
@@ -34,13 +38,8 @@ def enviar_telegram(mensaje):
     except: return False
 
 def peticion_pro(url, imp="chrome110"):
-    # Cabeceras ultraligeras para evitar detección de "falsificación de headers"
-    headers = {
-        "User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/118.0.0.0 Safari/537.36",
-        "Accept-Language": "es-ES,es;q=0.9",
-        "Referer": "https://www.google.com/"
-    }
-    return curl_requests.get(url, impersonate=imp, headers=headers, timeout=30)
+    # curl_cffi maneja automáticamente los headers para que coincidan con la huella TLS
+    return curl_requests.get(url, impersonate=imp, timeout=30)
 
 # --- RASTREADORES ---
 
@@ -57,7 +56,9 @@ def buscar_linkedin(query):
             try:
                 job_id = "ln_" + (job.get('data-entity-urn') or str(hash(job.text[:20])))
                 if job_id not in OFERTAS_VISTAS:
-                    t = job.find(['h3', 'h2']).text.strip()
+                    t_el = job.find(['h3', 'h2'])
+                    if not t_el: continue
+                    t = t_el.text.strip()
                     l = job.find('a')['href'].split('?')[0]
                     if enviar_telegram(f"🚀 <b>LINKEDIN</b>\n📌 {t}\n🔗 <a href='{l}'>Ver</a>"):
                         OFERTAS_VISTAS.add(job_id); nuevas += 1
@@ -77,7 +78,9 @@ def buscar_infojobs(query):
         for link in links:
             try:
                 href = link['href']
-                job_id = "ij_" + re.search(r'of-i([a-zA-Z0-9]+)', href).group(1)
+                match = re.search(r'of-i([a-zA-Z0-9]+)', href)
+                if not match: continue
+                job_id = "ij_" + match.group(1)
                 if job_id not in OFERTAS_VISTAS:
                     titulo = link.text.strip()
                     if not any(k in titulo.lower() for k in ["back", "office", "admin", "postventa", "director", "mando"]): continue
@@ -89,11 +92,10 @@ def buscar_infojobs(query):
 
 def buscar_indeed(query):
     q_enc = query.replace(" ", "+")
-    # Cambiamos a URL de escritorio limpia para evitar el 401 de la versión móvil
     url = f"https://es.indeed.com/jobs?q={q_enc}&l=España&fromage=1"
     try:
         time.sleep(random.uniform(2, 4))
-        res = peticion_pro(url, imp="chrome101") # Versión antigua suele saltar mejor el 401
+        res = peticion_pro(url, imp="safari_15_3") # Safari suele tener menos problemas en Indeed
         if res.status_code != 200: return 0, f"Indeed: {res.status_code}"
         soup = BeautifulSoup(res.text, 'html.parser')
         jobs = soup.find_all('div', class_=re.compile(r'job_seen_beacon'))
@@ -161,7 +163,7 @@ def buscar_glassdoor(query):
     url = f"https://www.glassdoor.es/Job/espana-{q_enc}-jobs-SRCH_IL.0,6_IN219.htm?fromAge=1"
     try:
         time.sleep(random.uniform(3, 5))
-        res = peticion_pro(url, imp="safari_ios_16_0") # Safari suele saltar el 403 de Glassdoor
+        res = peticion_pro(url, imp="chrome110") 
         if res.status_code != 200: return 0, f"Glassdoor: {res.status_code}"
         soup = BeautifulSoup(res.text, 'html.parser')
         links = soup.find_all('a', attrs={'data-test': 'job-link'})
@@ -204,7 +206,7 @@ def buscar_jooble(query):
     url = f"https://es.jooble.org/trabajo?q={q_enc}&l=España"
     try:
         time.sleep(random.uniform(2, 4))
-        res = peticion_pro(url, imp="chrome110")
+        res = peticion_pro(url, imp="chrome116")
         if res.status_code != 200: return 0, f"Jooble: {res.status_code}"
         soup = BeautifulSoup(res.text, 'html.parser')
         articles = soup.find_all('article')
@@ -234,14 +236,20 @@ def ejecutar_todas():
     ]
     for term in terminos:
         for nombre, func in rastreadores:
-            n, err = func(term)
-            total += n
-            if err: errores.append(err)
-            time.sleep(3) # Pausa entre plataformas para no saturar
+            try:
+                n, err = func(term)
+                total += n
+                if err: errores.append(err)
+                time.sleep(3)
+            except Exception as e:
+                errores.append(f"{nombre}: {str(e)}")
     
-    n, err = buscar_manfred()
-    total += n
-    if err: errores.append(err)
+    try:
+        n, err = buscar_manfred()
+        total += n
+        if err: errores.append(err)
+    except Exception as e:
+        errores.append(f"Manfred: {str(e)}")
 
     if total > 0:
         enviar_telegram(f"✅ <b>Ciclo Finalizado</b>\nSe han enviado <b>{total}</b> ofertas nuevas.")
