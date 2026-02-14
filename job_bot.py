@@ -540,9 +540,9 @@ def run_all_searches() -> None:
     )
     send_telegram(summary)
     
+    # Los errores se registran solo en el log, no se envían a Telegram
     if errores:
-        error_msg = "⚠️ <b>ERRORES DETECTADOS</b>\n" + "\n".join([f"• {e}" for e in errores[:5]])
-        send_telegram(error_msg)
+        logger.warning(f"Se detectaron {len(errores)} errores durante la búsqueda (ver log para detalles)")
     
     logger.info(f"Ciclo completado: {total_nuevas} nuevas, {len(errores)} errores")
     save_seen_offers(OFERTAS_VISTAS)
