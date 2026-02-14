@@ -1,0 +1,38 @@
+# Ambiente virtual
+venv/
+env/
+__pycache__/
+*.py[cod]
+*$py.class
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# Archivos locales con datos sensibles
+.env
+.env.local
+*.env
+local_config.py
+
+# Logs locales
+bot.log
+*.log
+
+# Base de datos local
+ofertas_vistas.json
+*.db
+*.sqlite
+
+# Sistema
+.DS_Store
+Thumbs.db
+*.tmp
+
+# Excepciones: SÍ subir estos en GitHub
+!.github/workflows/jobpulse.yml
+!requirements.txt
+!README.md
+!job_bot.py
