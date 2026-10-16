@@ -1,38 +1,23 @@
-# Ambiente virtual
-venv/
-env/
-__pycache__/
-*.py[cod]
-*$py.class
+# Tus datos personales — que no acaben en un repositorio público por accidente
+# Your personal data — so it never lands in a public repository by accident
+CV_GENERICO.docx
+GENERIC_CV.docx
+foto_perfil_circular.png
+profile_photo_circular.png
+CVs_OFERTAS/
+CVs_JOBS/
+unpack_*/
 
-# IDE
-.vscode/
-.idea/
-*.swp
-*.swo
-
-# Archivos locales con datos sensibles
-.env
-.env.local
-*.env
-local_config.py
-
-# Logs locales
-bot.log
-*.log
-
-# Base de datos local
-ofertas_vistas.json
-*.db
-*.sqlite
-
-# Sistema
+# Sobras del sistema · OS leftovers
 .DS_Store
 Thumbs.db
-*.tmp
 
-# Excepciones: SÍ subir estos en GitHub
-!.github/workflows/jobpulse.yml
-!requirements.txt
-!README.md
-!job_bot.py
+# Fotos y PDF del CV (mismos datos personales que los .docx de arriba)
+foto_perfil_circular.jpg
+profile_photo_circular.jpg
+CV_GENERICO.pdf
+GENERIC_CV.pdf
+
+# Carpetas locales que no aportan nada al repositorio
+.atl/
+.ruff_cache/

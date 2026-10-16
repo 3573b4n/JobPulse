@@ -1,117 +1,124 @@
-# 🤖 JobPulse — Búsqueda de Empleo Automatizada
+# 🤖 Automated Job Search with an AI Agent
+# Búsqueda de Empleo Automática con un Agente de IA
 
-**[🇪🇸 Español](#-español) · [🇬🇧 English](#-english)**
+**A project template that lets any AI agent run your whole job search.** You drop in your CV
+and your details once; from there it decides where to look, tunes your profiles, finds jobs
+that actually fit, writes a tailored CV for each one and keeps track of every process. It is
+not an app and there is nothing to install: it's a set of markdown files that tell the agent
+how to behave.
 
-![Python](https://img.shields.io/badge/Python-3.11-3776AB?style=flat&logo=python&logoColor=white)
-![Telegram Bot](https://img.shields.io/badge/Telegram-Bot_API-26A5E4?style=flat&logo=telegram&logoColor=white)
-![GitHub Actions](https://img.shields.io/badge/GitHub_Actions-Cron_30min-2088FF?style=flat&logo=githubactions&logoColor=white)
-![License](https://img.shields.io/badge/License-MIT-yellow.svg)
-
----
-
-## 🇪🇸 Español
-
-Agente inteligente que rastrea **plataformas de empleo españolas cada 30 minutos** y te
-notifica por Telegram cuando aparece una oferta que cumple tus criterios. Corre 24/7 en
-GitHub Actions (nivel gratuito): no necesita tu PC encendido.
-
-### 🎯 ¿Qué hace?
-
-- **Rastreo automático** de ofertas cada 30 minutos (cron configurable).
-- **Notificaciones enriquecidas en Telegram** con título, ubicación y enlace directo.
-- **Deduplicación persistente**: guarda los IDs de ofertas ya vistas y nunca repite.
-- **Primero en aplicar**: en un mercado dinámico, recibir la oferta en minutos marca la diferencia.
-
-### 🧩 Dos módulos de scraping
-
-| Módulo | Plataformas | Workflow |
-|---|---|---|
-| `job_bot.py` | LinkedIn · InfoJobs · Indeed · TecnoEmpleo · Glassdoor · Jooble | `.github/workflows/jobpulse.yml` |
-| `bot_cloud.py` | LinkedIn · InfoJobs · TecnoEmpleo · JobToday · Manfred | `.github/workflows/main.yml` |
-
-### ✅ Sistema de filtros inteligente
-
-Solo recibe ofertas que cumplen **3 condiciones AND**:
-
-1. **Contiene**: "back office", "backoffice" o "postventa"
-2. **Indica remoto**: "remoto", "teletrabajo", "home office"
-3. **Excluye roles**: director, senior, developer, freelance, etc.
-
-### 🛡️ Estable y seguro
-
-- Reintentos automáticos ante timeouts y backoff exponencial para rate limits.
-- Logging completo de cada ejecución.
-- Credenciales **solo por variables de entorno / GitHub Secrets** — ningún secreto en el código.
-
-### ⚡ Instalación (5 minutos)
-
-1. **Credenciales de Telegram**: `@BotFather` → `/newbot` → copia el `TOKEN`. `@userinfobot` → `/start` → copia tu `CHAT_ID`.
-2. **Clona el repo**: `git clone https://github.com/3573b4n/JobPulse.git`
-3. **Añade los Secrets**: Settings → Secrets and variables → Actions → `TELEGRAM_TOKEN` y `TELEGRAM_CHAT_ID`.
-4. **Permisos**: Settings → Actions → General → "Read and write permissions" ✅
-5. **Listo**: el bot se ejecuta solo cada 30 minutos (o manualmente con `workflow_dispatch`).
-
-### 🗂 Estructura del proyecto
-
-```
-JobPulse/
-├── job_bot.py                       # Scraper principal — 6 plataformas
-├── bot_cloud.py                     # Scraper alternativo — 5 plataformas
-├── validate.py                      # Validación de config y conexión a Telegram
-├── requirements.txt                 # requests · beautifulsoup4 · curl_cffi · lxml
-├── ofertas_vistas.txt               # IDs ya vistos (dedup, autogenerado)
-├── .github/workflows/jobpulse.yml   # Cron 30 min → job_bot.py
-└── .github/workflows/main.yml       # Cron 30 min → bot_cloud.py
-```
-
-### 🔧 Personalización
-
-Edita `job_bot.py` o `bot_cloud.py` para cambiar palabras clave requeridas/excluidas,
-la frecuencia del cron (`.github/workflows/*.yml`) o el formato de los mensajes.
+**Una plantilla de proyecto para que cualquier agente de IA lleve tu búsqueda de empleo
+entera.** Le das tu CV y tus datos una vez; a partir de ahí decide dónde buscar, te prepara los
+perfiles, encuentra ofertas que encajen de verdad, redacta un CV a medida para cada una y lleva
+el seguimiento de cada proceso. No es una aplicación ni hay nada que instalar: son archivos de
+texto que le dicen al agente cómo comportarse.
 
 ---
 
-## 🇬🇧 English
+## Start here · Empieza por aquí
 
-Smart agent that scans **Spanish job boards every 30 minutes** and sends you a Telegram
-notification whenever a posting matches your criteria. Runs 24/7 on GitHub Actions
-(free tier) — your PC stays off.
+Step by step, assuming you have never used GitHub. It takes about 15 minutes.
+Paso a paso, sin dar por sabido nada de GitHub. Son unos 15 minutos.
 
-### 🎯 What it does
-
-- **Automatic scraping** every 30 minutes (configurable cron).
-- **Rich Telegram notifications** with title, location and direct link.
-- **Persistent deduplication**: stores seen offer IDs, never repeats.
-- **First to apply**: getting the alert in minutes makes the difference in a fast market.
-
-### 🧩 Two scraping modules
-
-| Module | Platforms | Workflow |
+| | Install · Instalar | What you need · Qué necesitas |
 |---|---|---|
-| `job_bot.py` | LinkedIn · InfoJobs · Indeed · TecnoEmpleo · Glassdoor · Jooble | `.github/workflows/jobpulse.yml` |
-| `bot_cloud.py` | LinkedIn · InfoJobs · TecnoEmpleo · JobToday · Manfred | `.github/workflows/main.yml` |
+| 🇬🇧 | **[Installation guide →](en/INSTALL.md)** | [Requirements](en/REQUIREMENTS.md) |
+| 🇪🇸 | **[Guía de instalación →](es/INSTALACION.md)** | [Requisitos](es/REQUISITOS.md) |
 
-### ✅ Smart filtering
+No CV yet? The project writes one with you — no need to bring one.
+¿No tienes CV? El proyecto te lo hace: no hace falta que traigas nada.
 
-You only get offers matching **3 AND conditions**: keywords ("back office", "backoffice",
-"postventa") + remote signal ("remoto", "teletrabajo", "home office") minus excluded roles
-(director, senior, developer, freelance…).
+---
 
-### 🛡️ Stable and secure
+## How it works · Cómo funciona
 
-- Automatic retries on timeouts, exponential backoff for rate limits.
-- Full logging on every run.
-- Credentials **only via environment variables / GitHub Secrets** — no secrets in code.
+![The five stages in a row, with arrows to the files each one writes](en/stages_graph.svg)
 
-### ⚡ Setup (5 minutes)
+1. **Choose where to search** · **Elegir dónde buscar** — you name the sites you already use
+   and it recommends others that fit your profile and your area.
+2. **Prepare your profiles** *(optional)* · **Preparar los perfiles** *(opcional)* — it reviews
+   LinkedIn, GitHub and the job boards against your data and proposes changes one by one.
+3. **Search** · **Buscar** — it walks your platforms in priority order and records what fits.
+4. **Generate CVs** · **Generar los CV** — one tailored CV per job, copying your own Word
+   design and changing only the text.
+5. **Apply** · **Aplicar** — it submits where it can and tracks the rest. This stage is
+   optional: you can keep the applying to yourself.
 
-1. **Telegram credentials**: `@BotFather` → `/newbot` → copy the `TOKEN`. `@userinfobot` → `/start` → copy your `CHAT_ID`.
-2. **Clone the repo**: `git clone https://github.com/3573b4n/JobPulse.git`
-3. **Add Secrets**: Settings → Secrets and variables → Actions → `TELEGRAM_TOKEN` and `TELEGRAM_CHAT_ID`.
-4. **Permissions**: Settings → Actions → General → "Read and write permissions" ✅
-5. **Done**: the bot runs itself every 30 minutes (or manually via `workflow_dispatch`).
+Every stage writes to a plain text file you can read and correct at any point. Nothing happens
+in a black box.
 
-### 🔧 Customization
+Cada etapa escribe en un archivo de texto que puedes leer y corregir cuando quieras. No hay
+caja negra.
 
-Edit `job_bot.py` or `bot_cloud.py` to change keywords, the cron schedule
-(`.github/workflows/*.yml`) or the message format.
+---
+
+## How the pieces fit · Cómo encajan las piezas
+
+![Structure of the template: the manual at the centre as the authority, surrounded by the rules file, the readme and the five state files](en/structure_graph.svg)
+
+The manual in the centre is the authority: it holds the rules the agent follows. Around it sit
+the state files it maintains as it works — the platforms you approved, the jobs found, the
+ones already applied to, and your open selection processes.
+
+El manual del centro es la autoridad: contiene las reglas que sigue el agente. Alrededor están
+los archivos de estado que él mantiene mientras trabaja: las plataformas que aprobaste, las
+ofertas encontradas, las ya aplicadas y tus procesos de selección abiertos.
+
+<sub>Figures in Spanish · Figuras en español: [`es/grafo_dependencias.md`](es/grafo_dependencias.md)
+— full explanation in English: [`en/dependency_graph.md`](en/dependency_graph.md)</sub>
+
+---
+
+## Pick your language · Elige tu idioma
+
+| | |
+|---|---|
+| 🇬🇧 **[English →](en/)** | The whole template in English: start with `en/README.md`. |
+| 🇪🇸 **[Español →](es/)** | La plantilla entera en español: empieza por `es/README.md`. |
+
+Each folder is **a complete, self-contained copy**. Copy the repository, open the folder in
+your language and **delete the other one** — you only need one, and keeping a single copy means
+the two can never drift apart on you.
+
+Cada carpeta es **una copia completa y autónoma**. Copia el repositorio, abre la carpeta de tu
+idioma y **borra la otra**: solo necesitas una, y así no se te desincronizan.
+
+> The Spanish copy is the reference version. If the two ever disagree, `es/` wins.
+> La versión de referencia es la española: si alguna vez discrepan, manda `es/`.
+
+---
+
+## What you need · Qué necesitas
+
+An AI agent that can read and write files in the folder (Claude Code, Codex, Cursor, Gemini
+CLI, Copilot…). To search and apply it also needs to browse the web; to build the CVs it needs
+to run commands, with LibreOffice or Microsoft Word installed.
+
+Un agente de IA que pueda leer y escribir archivos en la carpeta (Claude Code, Codex, Cursor,
+Gemini CLI, Copilot…). Para buscar y aplicar necesita además navegar por internet; para generar
+los CV, ejecutar comandos y tener LibreOffice o Microsoft Word instalado.
+
+> **OpenCode**: this repo ships ready-to-use OpenCode support — `opencode.json` (permissions
+> + `AGENTS.md` loading) and the `/iniciar` command. Open it in the project folder and run
+> `/iniciar`. · Este repo incluye soporte OpenCode listo: `opencode.json` y el comando
+> `/iniciar`. Ábrelo en la carpeta y escribe `/iniciar`.
+
+---
+
+## Then just say · Y luego solo di
+
+> **«Start the project»** · **«Inicia el proyecto»**
+
+The agent interviews you, fills everything in and gets to work.
+El agente te entrevista, lo rellena todo y se pone a trabajar.
+
+---
+
+## Créditos · Credits
+
+Plantilla original: [`ackyer/job-search-agent-template`](https://github.com/ackyer/job-search-agent-template),
+de Ander Akier Ayucar Chasco (licencia MIT). Esta copia añade el soporte de OpenCode
+(`opencode.json`, `OPENCODE.md` y el comando `/iniciar`) sin tocar el resto de la plantilla.
+
+Original template by Ander Akier Ayucar Chasco (MIT). This copy adds OpenCode support
+(`opencode.json`, `OPENCODE.md` and the `/iniciar` command).
